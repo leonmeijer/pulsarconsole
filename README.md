@@ -1,73 +1,137 @@
-# React + TypeScript + Vite
+# Pulsar Console
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, real-time management UI for Apache Pulsar.
 
-Currently, two official plugins are available:
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React](https://img.shields.io/badge/React-19-61dafb.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6.svg)
+![Python](https://img.shields.io/badge/Python-3.11+-3776ab.svg)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Overview
 
-## React Compiler
+Pulsar Console is a sleek, real-time web interface for managing and monitoring Apache Pulsar clusters. Built with React and Python FastAPI, it provides intuitive dashboards, topic management, subscription monitoring, and message browsing — all with a modern dark-themed UI.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+- **Real-time Monitoring** — Live cluster health, message throughput, and broker status
+- **Topic Management** — Create, delete, and configure topics with partition support
+- **Subscription Management** — Monitor backlogs, skip messages, and reset cursors
+- **Message Browser** — Inspect messages in subscriptions without consuming them
+- **Multi-tenant Support** — Navigate tenants, namespaces, and topics hierarchically
+- **Favorites** — Quick access to frequently used topics and subscriptions
+- **Audit Logging** — Track all management operations
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Screenshots
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+*Coming soon*
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Quick Start
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+
+- Node.js 20+
+- Python 3.11+
+- Docker & Docker Compose (optional)
+- Access to an Apache Pulsar cluster
+
+### Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/leonmeijer/pulsarconsole.git
+   cd pulsarconsole
+   ```
+
+2. **Start infrastructure** (PostgreSQL, Redis)
+   ```bash
+   docker compose up -d postgres redis
+   ```
+
+3. **Setup backend**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   cp .env.example .env      # Edit .env with your Pulsar cluster URL
+   alembic upgrade head      # Run database migrations
+   uvicorn app.main:app --reload
+   ```
+
+4. **Setup frontend**
+   ```bash
+   cd ..  # Back to root
+   npm install
+   npm run dev
+   ```
+
+5. **Open** http://localhost:5173
+
+### Docker Compose (Full Stack)
+
+```bash
+# Start everything including a local Pulsar instance
+docker compose --profile full up -d
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Configuration
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Backend Environment Variables
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PULSAR_ADMIN_URL` | Pulsar Admin REST API URL | `http://localhost:8080` |
+| `PULSAR_AUTH_TOKEN` | Authentication token (optional) | — |
+| `DATABASE_URL` | PostgreSQL connection string | — |
+| `REDIS_URL` | Redis connection string | — |
+
+See `backend/.env.example` for all available options.
+
+## Tech Stack
+
+### Frontend
+- React 19 with TypeScript
+- Vite for build tooling
+- TanStack Query for data fetching
+- Tailwind CSS for styling
+- Framer Motion for animations
+- Recharts for visualizations
+
+### Backend
+- Python 3.11+ with FastAPI
+- SQLAlchemy with async PostgreSQL
+- Redis for caching
+- Celery for background tasks
+
+## Project Structure
+
 ```
+pulsarconsole/
+├── src/                    # React frontend
+│   ├── api/               # API client and hooks
+│   ├── components/        # Reusable UI components
+│   ├── pages/             # Page components
+│   └── context/           # React context providers
+├── backend/               # Python FastAPI backend
+│   ├── app/
+│   │   ├── api/          # REST API endpoints
+│   │   ├── services/     # Business logic
+│   │   ├── models/       # Database models
+│   │   └── worker/       # Celery tasks
+│   └── alembic/          # Database migrations
+├── docker-compose.yml     # Development setup
+└── docker-compose.prod.yml # Production setup
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Apache Pulsar](https://pulsar.apache.org/) — The distributed messaging platform
+- [Lucide Icons](https://lucide.dev/) — Beautiful open source icons
