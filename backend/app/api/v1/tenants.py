@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import AuditSvc, RequestInfo, TenantSvc
+from app.api.deps import AuditSvc, CurrentApprovedUser, RequestInfo, TenantSvc
 from app.models.audit import ActionType, ResourceType
 from app.schemas import (
     SuccessResponse,
@@ -18,6 +18,7 @@ router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
 @router.get("", response_model=TenantListResponse)
 async def list_tenants(
+    _user: CurrentApprovedUser,
     service: TenantSvc,
     use_cache: bool = Query(default=True, description="Use cached data"),
 ) -> TenantListResponse:
@@ -30,7 +31,7 @@ async def list_tenants(
 
 
 @router.get("/{tenant}", response_model=TenantDetailResponse)
-async def get_tenant(tenant: str, service: TenantSvc) -> TenantDetailResponse:
+async def get_tenant(tenant: str, _user: CurrentApprovedUser, service: TenantSvc) -> TenantDetailResponse:
     """Get tenant details."""
     data = await service.get_tenant(tenant)
     return TenantDetailResponse(**data)
@@ -39,6 +40,7 @@ async def get_tenant(tenant: str, service: TenantSvc) -> TenantDetailResponse:
 @router.post("", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)
 async def create_tenant(
     data: TenantCreate,
+    _user: CurrentApprovedUser,
     service: TenantSvc,
     audit: AuditSvc,
     request_info: RequestInfo,
@@ -65,6 +67,7 @@ async def create_tenant(
 async def update_tenant(
     tenant: str,
     data: TenantUpdate,
+    _user: CurrentApprovedUser,
     service: TenantSvc,
     audit: AuditSvc,
     request_info: RequestInfo,
@@ -90,6 +93,7 @@ async def update_tenant(
 @router.delete("/{tenant}", response_model=SuccessResponse)
 async def delete_tenant(
     tenant: str,
+    _user: CurrentApprovedUser,
     service: TenantSvc,
     audit: AuditSvc,
     request_info: RequestInfo,

@@ -337,6 +337,42 @@ async def get_current_superuser(
     return current_user
 
 
+async def has_any_role(user: User, db: AsyncSession) -> bool:
+    """
+    Check if a user has any role assigned.
+
+    Users without any roles are considered "pending approval" and should
+    not have access to the system.
+    """
+    from sqlalchemy import select
+    from app.models.user_role import UserRole
+
+    result = await db.execute(
+        select(UserRole).where(UserRole.user_id == user.id).limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def get_current_approved_user(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    """
+    Get the current user if they have been approved (have at least one role).
+
+    Users without any roles are considered "pending approval" and will
+    receive a 403 Forbidden response.
+
+    Raises HTTPException 403 if user has no roles.
+    """
+    if not await has_any_role(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access pending approval. Please contact an administrator to assign you a role.",
+        )
+    return current_user
+
+
 def require_permission(
     action: str,
     resource_level: str,
@@ -425,4 +461,5 @@ PulsarAuthSvc = Annotated[PulsarAuthService, Depends(get_pulsar_auth_service)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+CurrentApprovedUser = Annotated[User, Depends(get_current_approved_user)]
 CurrentSuperuser = Annotated[User, Depends(get_current_superuser)]

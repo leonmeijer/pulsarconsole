@@ -13,6 +13,7 @@ from app.api.deps import (
     get_current_superuser,
     CurrentActiveUser,
     CurrentSuperuser,
+    DbSession,
 )
 from app.models.user import User
 from app.services.rbac import RBACService
@@ -594,6 +595,57 @@ async def set_user_roles(
     )
 
     return {"message": "Roles updated"}
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: UUID,
+    current_user: CurrentSuperuser,
+    db: DbSession,
+) -> dict:
+    """
+    Delete a user. Requires superuser privileges.
+
+    Cannot delete users who have the superuser role assigned.
+    Cannot delete yourself.
+    """
+    from app.repositories.user import UserRepository
+    from app.repositories.user_role import UserRoleRepository
+    from app.repositories.role import RoleRepository
+
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account",
+        )
+
+    user_repo = UserRepository(db)
+    user_role_repo = UserRoleRepository(db)
+    role_repo = RoleRepository(db)
+
+    # Check if user exists
+    user = await user_repo.get_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Check if user has superuser role
+    user_roles = await user_role_repo.get_user_roles(user_id)
+    for ur in user_roles:
+        role = await role_repo.get_by_id(ur.role_id)
+        if role and role.name == "superuser":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete a user with superuser role. Remove the superuser role first.",
+            )
+
+    # Delete the user (cascades to sessions, user_roles, api_tokens)
+    await user_repo.delete(user_id)
+    await db.commit()
+
+    return {"message": "User deleted"}
 
 
 # =============================================================================

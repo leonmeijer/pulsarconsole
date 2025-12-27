@@ -58,8 +58,9 @@ export default function LoginPage() {
     }
   }, [isLoading, authRequired, navigate]);
 
-  const handleLogin = async () => {
-    if (!selectedProvider) {
+  const handleLogin = async (providerId?: string) => {
+    const provider = providerId || selectedProvider;
+    if (!provider) {
       toast.error('Please select a provider');
       return;
     }
@@ -69,12 +70,18 @@ export default function LoginPage() {
 
     try {
       const redirectUri = `${window.location.origin}/login`;
-      const authUrl = await login(selectedProvider, redirectUri);
+      const authUrl = await login(provider, redirectUri);
       window.location.href = authUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to initiate login');
       setIsLoggingIn(false);
     }
+  };
+
+  const handleProviderDoubleClick = (providerId: string) => {
+    if (isLoggingIn) return;
+    setSelectedProvider(providerId);
+    handleLogin(providerId);
   };
 
   // Show loading while checking auth state
@@ -135,6 +142,7 @@ export default function LoginPage() {
                   <button
                     key={provider.id}
                     onClick={() => setSelectedProvider(provider.id)}
+                    onDoubleClick={() => handleProviderDoubleClick(provider.id)}
                     disabled={isLoggingIn}
                     className={`w-full p-4 rounded-lg border transition-all text-left flex items-center gap-3 ${
                       selectedProvider === provider.id
@@ -159,7 +167,7 @@ export default function LoginPage() {
               </div>
 
               <button
-                onClick={handleLogin}
+                onClick={() => handleLogin()}
                 disabled={!selectedProvider || isLoggingIn}
                 className="w-full mt-6 py-3 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >

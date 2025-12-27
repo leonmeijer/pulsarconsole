@@ -8,6 +8,7 @@ import {
   Search,
   Check,
   Mail,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -15,18 +16,22 @@ import {
   useRoles,
   useAssignUserRole,
   useRevokeUserRole,
+  useDeleteUser,
 } from '@/api/hooks';
 import type { UserWithRoles } from '@/api/types';
+import { ConfirmDialog } from '@/components/shared';
 
 export default function UsersPage() {
   const { data: users, isLoading: usersLoading } = useUsers();
   const { data: roles } = useRoles();
   const assignRole = useAssignUserRole();
   const revokeRole = useRevokeUserRole();
+  const deleteUser = useDeleteUser();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showAssignRole, setShowAssignRole] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [deleteConfirm, setDeleteConfirm] = useState<UserWithRoles | null>(null);
 
   const filteredUsers = users?.filter((user) =>
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -56,6 +61,22 @@ export default function UsersPage() {
     } catch {
       toast.error('Failed to revoke role');
     }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      await deleteUser.mutateAsync(deleteConfirm.id);
+      toast.success(`User "${deleteConfirm.display_name || deleteConfirm.email}" deleted`);
+      setDeleteConfirm(null);
+    } catch {
+      toast.error('Failed to delete user');
+    }
+  };
+
+  const hasSuperuserRole = (user: UserWithRoles) => {
+    return user.roles.some((role) => role.role_name === 'superuser');
   };
 
   const getInitials = (user: UserWithRoles) => {
@@ -143,14 +164,14 @@ export default function UsersPage() {
                         user.roles.map((role) => (
                           <span
                             key={role.role_id}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full group"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
                           >
                             <Shield size={10} />
                             {role.role_name}
-                            {!role.is_system && (
+                            {role.role_name !== 'superuser' && (
                               <button
                                 onClick={() => handleRevokeRole(user.id, role.role_id, role.role_name)}
-                                className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+                                className="ml-1 p-0.5 rounded hover:bg-destructive/20 hover:text-destructive transition-colors"
                                 title="Remove role"
                               >
                                 <X size={12} />
@@ -211,6 +232,17 @@ export default function UsersPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Delete Button */}
+                  {!hasSuperuserRole(user) && (
+                    <button
+                      onClick={() => setDeleteConfirm(user)}
+                      className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-lg transition-colors flex-shrink-0 self-start"
+                      title="Delete user"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -262,6 +294,18 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete User Confirmation */}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title="Delete User"
+        description={`Are you sure you want to delete "${deleteConfirm?.display_name || deleteConfirm?.email}"? This action cannot be undone. All associated sessions and API tokens will also be deleted.`}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteUser}
+        variant="danger"
+        loading={deleteUser.isPending}
+      />
     </div>
   );
 }

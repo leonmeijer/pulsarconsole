@@ -976,6 +976,19 @@ export function useUsers() {
   });
 }
 
+export function usePendingUsersCount() {
+  const { data: users, isLoading } = useUsers();
+
+  const pendingCount = users?.filter((user) => user.roles.length === 0).length ?? 0;
+  const pendingUsers = users?.filter((user) => user.roles.length === 0) ?? [];
+
+  return {
+    count: pendingCount,
+    users: pendingUsers,
+    isLoading,
+  };
+}
+
 export function useAssignUserRole() {
   const queryClient = useQueryClient();
   return useMutation<SuccessResponse, Error, { userId: string; roleId: string }>({
@@ -1005,6 +1018,21 @@ export function useRevokeUserRole() {
     onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
       queryClient.invalidateQueries({ queryKey: queryKeys.userRoles(userId) });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (userId) => {
+      const { data } = await api.delete<SuccessResponse>(
+        `/api/v1/rbac/users/${userId}`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
     },
   });
 }

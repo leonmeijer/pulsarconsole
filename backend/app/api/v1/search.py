@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.api.deps import PulsarClient
+from app.api.deps import CurrentApprovedUser, PulsarClient
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -35,6 +35,7 @@ class SearchResponse(BaseModel):
 @router.get("", response_model=SearchResponse)
 async def global_search(
     q: str,
+    _user: CurrentApprovedUser,
     pulsar: PulsarClient,
     limit: int = 20,
 ) -> SearchResponse:
