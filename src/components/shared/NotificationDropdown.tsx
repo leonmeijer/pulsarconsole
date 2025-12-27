@@ -20,7 +20,7 @@ import {
     useMarkAllNotificationsRead,
     useDismissNotification,
 } from "@/api/hooks";
-import { PulsarNotification, NotificationType, NotificationSeverity } from "@/api/types";
+import type { PulsarNotification, NotificationType, NotificationSeverity } from "@/api/types";
 import { formatDistanceToNow } from "date-fns";
 
 function getSeverityIcon(severity: NotificationSeverity) {
@@ -69,8 +69,8 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
 
     return (
         <div
-            className={`p-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
-                !notification.is_read ? "bg-white/[0.02]" : ""
+            className={`p-3 border-b border-zinc-700 hover:bg-zinc-800 transition-colors ${
+                !notification.is_read ? "bg-zinc-800/50" : ""
             }`}
         >
             <div className="flex items-start gap-3">
@@ -97,7 +97,7 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
                                         e.stopPropagation();
                                         onMarkRead(notification.id);
                                     }}
-                                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                                    className="p-1 hover:bg-zinc-700 rounded transition-colors"
                                     title="Mark as read"
                                 >
                                     <Check className="w-3.5 h-3.5 text-muted-foreground" />
@@ -108,7 +108,7 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
                                     e.stopPropagation();
                                     onDismiss(notification.id);
                                 }}
-                                className="p-1 hover:bg-white/10 rounded transition-colors"
+                                className="p-1 hover:bg-zinc-700 rounded transition-colors"
                                 title="Dismiss"
                             >
                                 <X className="w-3.5 h-3.5 text-muted-foreground" />
@@ -166,8 +166,8 @@ export default function NotificationDropdown() {
                     className="text-muted-foreground group-hover:text-foreground transition-colors"
                 />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] bg-destructive rounded-full border-2 border-background flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-white">
+                    <span className="absolute top-0.5 right-0.5 min-w-[20px] h-[20px] bg-red-600 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-[11px] font-bold text-white">
                             {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                     </span>
@@ -175,9 +175,9 @@ export default function NotificationDropdown() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-popover border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-96 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50">
                     {/* Header */}
-                    <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                    <div className="p-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-800">
                         <div className="flex items-center gap-2">
                             <Bell className="w-5 h-5 text-primary" />
                             <h3 className="font-semibold">Notifications</h3>
@@ -221,7 +221,7 @@ export default function NotificationDropdown() {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-3 border-t border-white/10 bg-white/[0.02]">
+                    <div className="p-3 border-t border-zinc-700 bg-zinc-800">
                         <Link
                             to="/notifications"
                             onClick={() => setIsOpen(false)}

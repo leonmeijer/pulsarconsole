@@ -22,7 +22,7 @@ import {
     useDismissNotification,
     useDismissAllNotifications,
 } from "@/api/hooks";
-import { PulsarNotification, NotificationType, NotificationSeverity } from "@/api/types";
+import type { PulsarNotification, NotificationType, NotificationSeverity } from "@/api/types";
 import { formatDistanceToNow, format } from "date-fns";
 
 function getSeverityIcon(severity: NotificationSeverity, size: "sm" | "md" = "md") {

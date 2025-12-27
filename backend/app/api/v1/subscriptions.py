@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Query, status
 
 from app.api.deps import AuditSvc, RequestInfo, SubscriptionSvc
-from app.models.audit import ResourceType
+from app.models.audit import ActionType, ResourceType
 from app.schemas import (
     ExpireMessagesRequest,
     ResetCursorRequest,
@@ -131,12 +131,25 @@ async def skip_messages(
     subscription: str,
     data: SkipMessagesRequest,
     service: SubscriptionSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
     persistent: bool = Query(default=True, description="Persistent topic"),
 ) -> SuccessResponse:
     """Skip messages in a subscription."""
     await service.skip_messages(
         tenant, namespace, topic, subscription, data.count, persistent=persistent
     )
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_event(
+        action=ActionType.SKIP_MESSAGES,
+        resource_type=ResourceType.SUBSCRIPTION,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}/{subscription}",
+        details={"count": data.count},
+        **request_info,
+    )
+
     return SuccessResponse(message=f"Skipped {data.count} messages")
 
 
@@ -147,12 +160,25 @@ async def skip_all_messages(
     topic: str,
     subscription: str,
     service: SubscriptionSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
     persistent: bool = Query(default=True, description="Persistent topic"),
 ) -> SuccessResponse:
     """Skip all messages in a subscription (clear backlog)."""
     await service.skip_all_messages(
         tenant, namespace, topic, subscription, persistent=persistent
     )
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_event(
+        action=ActionType.SKIP_ALL_MESSAGES,
+        resource_type=ResourceType.SUBSCRIPTION,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}/{subscription}",
+        details={"action": "clear_backlog"},
+        **request_info,
+    )
+
     return SuccessResponse(message="All messages skipped")
 
 
@@ -164,12 +190,25 @@ async def reset_cursor(
     subscription: str,
     data: ResetCursorRequest,
     service: SubscriptionSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
     persistent: bool = Query(default=True, description="Persistent topic"),
 ) -> SuccessResponse:
     """Reset subscription cursor to a timestamp."""
     await service.reset_cursor(
         tenant, namespace, topic, subscription, data.timestamp, persistent=persistent
     )
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_event(
+        action=ActionType.RESET_CURSOR,
+        resource_type=ResourceType.SUBSCRIPTION,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}/{subscription}",
+        details={"timestamp": data.timestamp},
+        **request_info,
+    )
+
     return SuccessResponse(message=f"Cursor reset to timestamp {data.timestamp}")
 
 
@@ -181,12 +220,25 @@ async def reset_cursor_to_message_id(
     subscription: str,
     data: ResetCursorToMessageIdRequest,
     service: SubscriptionSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
     persistent: bool = Query(default=True, description="Persistent topic"),
 ) -> SuccessResponse:
     """Reset subscription cursor to a message ID."""
     await service.reset_cursor_to_message_id(
         tenant, namespace, topic, subscription, data.message_id, persistent=persistent
     )
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_event(
+        action=ActionType.RESET_CURSOR,
+        resource_type=ResourceType.SUBSCRIPTION,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}/{subscription}",
+        details={"message_id": data.message_id},
+        **request_info,
+    )
+
     return SuccessResponse(message=f"Cursor reset to message {data.message_id}")
 
 
@@ -198,6 +250,8 @@ async def expire_messages(
     subscription: str,
     data: ExpireMessagesRequest,
     service: SubscriptionSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
     persistent: bool = Query(default=True, description="Persistent topic"),
 ) -> SuccessResponse:
     """Expire messages older than given time."""
@@ -209,6 +263,17 @@ async def expire_messages(
         data.expire_time_seconds,
         persistent=persistent,
     )
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_event(
+        action=ActionType.EXPIRE_MESSAGES,
+        resource_type=ResourceType.SUBSCRIPTION,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}/{subscription}",
+        details={"expire_time_seconds": data.expire_time_seconds},
+        **request_info,
+    )
+
     return SuccessResponse(
         message=f"Messages older than {data.expire_time_seconds}s expired"
     )

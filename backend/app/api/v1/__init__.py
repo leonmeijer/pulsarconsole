@@ -9,6 +9,7 @@ from app.api.v1 import (
     messages,
     namespaces,
     notifications,
+    search,
     subscriptions,
     tenants,
     topics,
@@ -26,3 +27,4 @@ router.include_router(messages.router)
 router.include_router(brokers.router)
 router.include_router(audit.router)
 router.include_router(notifications.router)
+router.include_router(search.router)

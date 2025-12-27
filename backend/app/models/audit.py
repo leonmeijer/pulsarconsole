@@ -17,6 +17,9 @@ class ActionType(str, Enum):
     DELETE = "delete"
     READ = "read"
     SKIP_MESSAGES = "skip_messages"
+    SKIP_ALL_MESSAGES = "skip_all_messages"
+    RESET_CURSOR = "reset_cursor"
+    EXPIRE_MESSAGES = "expire_messages"
     BROWSE_MESSAGES = "browse_messages"
 
 
