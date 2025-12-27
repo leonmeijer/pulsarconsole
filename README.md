@@ -18,6 +18,8 @@ Pulsar Console is a sleek, real-time web interface for managing and monitoring A
 - **Subscription Management** — Monitor backlogs, skip messages, and reset cursors
 - **Message Browser** — Inspect messages in subscriptions without consuming them
 - **Multi-tenant Support** — Navigate tenants, namespaces, and topics hierarchically
+- **Global Search** — Instantly find topics, subscriptions, consumers, namespaces, and brokers
+- **Notifications** — Automatic alerts for consumer disconnects, broker health issues, and storage warnings
 - **Favorites** — Quick access to frequently used topics and subscriptions
 - **Audit Logging** — Track all management operations
 

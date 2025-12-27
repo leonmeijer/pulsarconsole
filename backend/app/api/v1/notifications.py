@@ -174,9 +174,20 @@ async def create_notification(
 
 
 @router.post("/check-alerts", response_model=SuccessResponse)
-async def check_alerts(service: NotificationSvc) -> SuccessResponse:
+async def trigger_alert_check() -> SuccessResponse:
     """Manually trigger alert checks."""
-    counts = await service.check_all_alerts()
+    from app.worker.tasks.alerts import (
+        _check_consumer_disconnects,
+        _check_broker_health,
+        _check_storage_warnings,
+    )
+
+    consumer_count = await _check_consumer_disconnects()
+    broker_count = await _check_broker_health()
+    storage_count = await _check_storage_warnings()
+    total = consumer_count + broker_count + storage_count
+
     return SuccessResponse(
-        message=f"Alert check complete. Generated {sum(counts.values())} alerts."
+        message=f"Alert check complete. Generated {total} new alerts. "
+        f"(disconnects: {consumer_count}, broker: {broker_count}, storage: {storage_count})"
     )

@@ -120,7 +120,7 @@ async def global_search(
                                             SearchResult(
                                                 type="subscription",
                                                 name=sub_name,
-                                                path=f"/tenants/{tenant_name}/namespaces/{ns_name}/topics/{topic_short}/subscriptions/{sub_name}",
+                                                path=f"/tenants/{tenant_name}/namespaces/{ns_name}/topics/{topic_short}/subscription/{sub_name}",
                                                 description=f"on {topic_short} · {sub_stats.get('consumers', []).__len__()} consumers",
                                                 tenant=tenant_name,
                                                 namespace=ns_name,
@@ -139,7 +139,7 @@ async def global_search(
                                                 SearchResult(
                                                     type="consumer",
                                                     name=consumer_name,
-                                                    path=f"/tenants/{tenant_name}/namespaces/{ns_name}/topics/{topic_short}/subscriptions/{sub_name}",
+                                                    path=f"/tenants/{tenant_name}/namespaces/{ns_name}/topics/{topic_short}/subscription/{sub_name}",
                                                     description=f"{sub_name} · {consumer_address}",
                                                     tenant=tenant_name,
                                                     namespace=ns_name,
