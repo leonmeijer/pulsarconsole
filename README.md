@@ -14,6 +14,7 @@ Pulsar Console is a sleek, real-time web interface for managing and monitoring A
 ## Features
 
 - **Real-time Monitoring** — Live cluster health, message throughput, and broker status
+- **Multi-Environment Support** — Manage multiple Pulsar clusters with quick switching
 - **Topic Management** — Create, delete, and configure topics with partition support
 - **Subscription Management** — Monitor backlogs, skip messages, and reset cursors
 - **Message Browser** — Inspect messages in subscriptions without consuming them
@@ -21,7 +22,9 @@ Pulsar Console is a sleek, real-time web interface for managing and monitoring A
 - **Global Search** — Instantly find topics, subscriptions, consumers, namespaces, and brokers
 - **Notifications** — Automatic alerts for consumer disconnects, broker health issues, and storage warnings
 - **OIDC Authentication** — Secure login with PKCE support (Zitadel, Keycloak, Auth0, etc.)
-- **Favorites** — Quick access to frequently used topics and subscriptions
+- **RBAC** — Role-based access control with customizable permissions
+- **API Tokens** — Generate tokens for programmatic access
+- **Favorites** — Quick access to frequently used tenants, namespaces, topics, and subscriptions
 - **Audit Logging** — Track all management operations
 
 ## Screenshots
@@ -89,6 +92,33 @@ docker compose --profile full up -d
 | `REDIS_URL` | Redis connection string | — |
 
 See `backend/.env.example` for all available options.
+
+## Multi-Environment Management
+
+Pulsar Console supports managing multiple Pulsar clusters from a single interface.
+
+### Features
+
+- **Add environments** — Configure connections to different Pulsar clusters (dev, staging, production)
+- **Quick switching** — Use the environment selector in the header to switch between clusters
+- **Per-environment auth** — Each environment can have its own authentication settings
+- **Test connectivity** — Verify cluster connections before saving
+
+### Environment Settings
+
+| Setting | Description |
+|---------|-------------|
+| Name | Display name (e.g., "Production", "Staging") |
+| Admin URL | Pulsar Admin REST API URL |
+| Auth Mode | `none`, `token`, or `oauth2` |
+| Token | JWT token (when using token auth) |
+
+### Managing Environments
+
+1. Navigate to **Environment** in the sidebar
+2. Click **Add Environment** to configure a new cluster
+3. Use the **environment selector** in the header for quick switching
+4. Edit or delete environments from the Environment page
 
 ## Authentication
 
@@ -164,6 +194,45 @@ Pulsar Console (Backend) ──► Pulsar Broker (Admin API)
 └────────────────────────────────────────────────────────────────┘
 ```
 
+## Role-Based Access Control (RBAC)
+
+Pulsar Console includes a built-in RBAC system for managing user permissions.
+
+### Default Roles
+
+| Role | Description |
+|------|-------------|
+| `admin` | Full access to all features |
+| `operator` | Manage topics, subscriptions, and messages |
+| `viewer` | Read-only access to all resources |
+
+### Permissions
+
+Permissions are organized by resource type:
+
+- **Tenants** — `tenants:read`, `tenants:write`, `tenants:delete`
+- **Namespaces** — `namespaces:read`, `namespaces:write`, `namespaces:delete`
+- **Topics** — `topics:read`, `topics:write`, `topics:delete`
+- **Subscriptions** — `subscriptions:read`, `subscriptions:write`, `subscriptions:delete`
+- **Messages** — `messages:read`, `messages:write`
+- **Brokers** — `brokers:read`
+- **Settings** — `settings:read`, `settings:write`
+
+### API Tokens
+
+Generate API tokens for programmatic access:
+
+1. Navigate to **Settings > API Tokens**
+2. Click **Create Token**
+3. Set name, expiration, and permissions
+4. Copy the token (shown only once)
+
+```bash
+# Example: Use token with curl
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:8000/api/v1/tenants
+```
+
 ## Tech Stack
 
 ### Frontend
@@ -188,12 +257,15 @@ pulsarconsole/
 │   ├── api/               # API client and hooks
 │   ├── components/        # Reusable UI components
 │   ├── pages/             # Page components
-│   └── context/           # React context providers
+│   ├── context/           # React context providers
+│   └── hooks/             # Custom React hooks
 ├── backend/               # Python FastAPI backend
 │   ├── app/
 │   │   ├── api/          # REST API endpoints
 │   │   ├── services/     # Business logic
+│   │   ├── repositories/ # Data access layer
 │   │   ├── models/       # Database models
+│   │   ├── middleware/   # Auth & RBAC middleware
 │   │   └── worker/       # Celery tasks
 │   └── alembic/          # Database migrations
 ├── docker-compose.yml     # Development setup
