@@ -74,6 +74,14 @@ from app.schemas.topic import (
     TopicPartitionUpdate,
     TopicResponse,
 )
+from app.schemas.notification import (
+    CreateNotificationRequest,
+    DismissRequest,
+    MarkReadRequest,
+    NotificationCountResponse,
+    NotificationListResponse,
+    NotificationResponse,
+)
 
 __all__ = [
     # Common
@@ -141,4 +149,11 @@ __all__ = [
     "AuditEventListResponse",
     "AuditEventResponse",
     "AuditQueryParams",
+    # Notification
+    "CreateNotificationRequest",
+    "DismissRequest",
+    "MarkReadRequest",
+    "NotificationCountResponse",
+    "NotificationListResponse",
+    "NotificationResponse",
 ]

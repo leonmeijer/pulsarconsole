@@ -1,12 +1,13 @@
 """Audit API routes."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Query
 
 from app.api.deps import AuditSvc
-from app.models.audit import ActionType, ResourceType
+from app.models.audit import ActionType, AuditEvent, ResourceType
 from app.schemas import (
     AuditEventCountsResponse,
     AuditEventListResponse,
@@ -14,6 +15,28 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
+
+
+def _event_to_response(e: AuditEvent) -> AuditEventResponse:
+    """Convert AuditEvent model to response, extracting fields from request_params."""
+    params: dict[str, Any] = e.request_params or {}
+
+    # Extract user info and other fields from request_params
+    action_value = e.action.value if hasattr(e.action, 'value') else e.action
+    resource_type_value = e.resource_type.value if hasattr(e.resource_type, 'value') else e.resource_type
+
+    return AuditEventResponse(
+        id=e.id,
+        action=action_value,
+        resource_type=resource_type_value,
+        resource_id=e.resource_id,
+        user_id=params.get("user_id"),
+        user_email=params.get("user_email"),
+        details={k: v for k, v in params.items() if k not in ("user_id", "user_email", "ip_address", "user_agent")},
+        ip_address=params.get("ip_address"),
+        user_agent=params.get("user_agent"),
+        timestamp=e.timestamp,
+    )
 
 
 @router.get("/events", response_model=AuditEventListResponse)
@@ -44,21 +67,7 @@ async def list_audit_events(
     )
 
     return AuditEventListResponse(
-        events=[
-            AuditEventResponse(
-                id=e.id,
-                action=e.action.value,
-                resource_type=e.resource_type.value,
-                resource_id=e.resource_id,
-                user_id=e.user_id,
-                user_email=e.user_email,
-                details=e.details,
-                ip_address=e.ip_address,
-                user_agent=e.user_agent,
-                timestamp=e.timestamp,
-            )
-            for e in events
-        ],
+        events=[_event_to_response(e) for e in events],
         total=len(events),
     )
 
@@ -70,18 +79,7 @@ async def get_audit_event(event_id: UUID, service: AuditSvc) -> AuditEventRespon
     if event is None:
         return None
 
-    return AuditEventResponse(
-        id=event.id,
-        action=event.action.value,
-        resource_type=event.resource_type.value,
-        resource_id=event.resource_id,
-        user_id=event.user_id,
-        user_email=event.user_email,
-        details=event.details,
-        ip_address=event.ip_address,
-        user_agent=event.user_agent,
-        timestamp=event.timestamp,
-    )
+    return _event_to_response(event)
 
 
 @router.get("/events/resource/{resource_type}/{resource_id:path}")
@@ -96,21 +94,7 @@ async def get_resource_history(
     events = await service.get_resource_history(res_type, resource_id, limit=limit)
 
     return AuditEventListResponse(
-        events=[
-            AuditEventResponse(
-                id=e.id,
-                action=e.action.value,
-                resource_type=e.resource_type.value,
-                resource_id=e.resource_id,
-                user_id=e.user_id,
-                user_email=e.user_email,
-                details=e.details,
-                ip_address=e.ip_address,
-                user_agent=e.user_agent,
-                timestamp=e.timestamp,
-            )
-            for e in events
-        ],
+        events=[_event_to_response(e) for e in events],
         total=len(events),
     )
 

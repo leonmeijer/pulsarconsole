@@ -11,7 +11,8 @@ import {
     Star,
     FolderOpen,
     MessageSquare,
-    Users
+    Users,
+    Bell,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +22,7 @@ const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: Building2, label: "Tenants", path: "/tenants" },
     { icon: Server, label: "Brokers", path: "/brokers" },
+    { icon: Bell, label: "Notifications", path: "/notifications" },
     { icon: ScrollText, label: "Audit Logs", path: "/audit-logs" },
     { icon: Settings, label: "Environment", path: "/environment" },
 ];

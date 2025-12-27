@@ -10,6 +10,7 @@ import SubscriptionDetailPage from "./pages/SubscriptionDetail";
 import BrokersPage from "./pages/Brokers";
 import EnvironmentPage from "./pages/Environment";
 import AuditLogsPage from "./pages/AuditLogs";
+import NotificationsPage from "./pages/Notifications";
 
 const router = createBrowserRouter([
   {
@@ -55,6 +56,10 @@ const router = createBrowserRouter([
       {
         path: "audit-logs",
         element: <AuditLogsPage />,
+      },
+      {
+        path: "notifications",
+        element: <NotificationsPage />,
       },
       {
         path: "environment",

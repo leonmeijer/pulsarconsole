@@ -1,6 +1,7 @@
-import { Search, Bell, Globe, User } from "lucide-react";
+import { Search, Globe, User } from "lucide-react";
 import { useEnvironments, useActivateEnvironment } from "@/api/hooks";
 import { toast } from "sonner";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function Header() {
     const { data: environments, isLoading } = useEnvironments();
@@ -59,10 +60,7 @@ export default function Header() {
                     </div>
                 )}
 
-                <button className="p-2.5 rounded-full hover:bg-white/5 relative group transition-all active:scale-95">
-                    <Bell size={20} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background" />
-                </button>
+                <NotificationDropdown />
 
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center cursor-pointer hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
                     <User size={20} className="text-white" />

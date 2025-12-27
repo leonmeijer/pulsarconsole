@@ -317,6 +317,41 @@ export interface AuditEventListResponse {
   total: number;
 }
 
+// Notification Types
+export type NotificationType =
+  | 'consumer_disconnect'
+  | 'broker_health'
+  | 'storage_warning'
+  | 'backlog_warning'
+  | 'error'
+  | 'info';
+
+export type NotificationSeverity = 'info' | 'warning' | 'critical';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  severity: NotificationSeverity;
+  title: string;
+  message: string;
+  resource_type?: string;
+  resource_id?: string;
+  metadata?: Record<string, unknown>;
+  is_read: boolean;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
+}
+
+export interface NotificationCountResponse {
+  unread_count: number;
+}
+
 // Dashboard Types
 export interface DashboardStats {
   tenants: number;

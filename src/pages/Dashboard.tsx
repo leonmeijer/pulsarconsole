@@ -17,6 +17,9 @@ import {
     TrendingUp,
     Pause,
     Play,
+    Star,
+    Lightbulb,
+    X,
 } from "lucide-react";
 import { useDashboardStats, useHealthStatus, useTopTenants, useBrokers, queryKeys } from "@/api/hooks";
 import { MetricCard, ChartContainer, TimeSeriesChart, SimpleBarChart } from "@/components/shared";
@@ -92,6 +95,14 @@ export default function DashboardPage() {
     ];
 
     const [selectedRange, setSelectedRange] = useState(timeRanges[1]); // Default: 10m
+    const [showTip, setShowTip] = useState(() => {
+        return localStorage.getItem('pulsar-console-tip-dismissed') !== 'true';
+    });
+
+    const dismissTip = () => {
+        setShowTip(false);
+        localStorage.setItem('pulsar-console-tip-dismissed', 'true');
+    };
 
     // Collect real time series data points with timestamps
     const [allTimeSeriesData, setAllTimeSeriesData] = useState<Array<{
@@ -279,6 +290,36 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </motion.div>
+
+            {/* Tip about favorites */}
+            {showTip && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="glass p-4 rounded-2xl flex items-center gap-4 bg-primary/5 border border-primary/20"
+                >
+                    <div className="p-2 rounded-xl bg-primary/10">
+                        <Lightbulb className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium text-primary">Pro Tip</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            Click the <Star className="inline w-4 h-4 text-yellow-500 mx-1" /> icon on topics and subscriptions to add them to your favorites.
+                            They'll appear in the sidebar for quick access.
+                        </p>
+                    </div>
+                    <button
+                        onClick={dismissTip}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                        title="Dismiss tip"
+                    >
+                        <X size={18} />
+                    </button>
+                </motion.div>
+            )}
 
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

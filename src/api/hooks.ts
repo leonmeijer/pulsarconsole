@@ -34,6 +34,8 @@ import type {
   TopTopic,
   AuditEvent,
   AuditEventListResponse,
+  NotificationListResponse,
+  NotificationCountResponse,
 } from './types';
 
 // Query Keys
@@ -57,6 +59,8 @@ export const queryKeys = {
   topTenants: ['dashboard', 'top-tenants'] as const,
   topTopics: ['dashboard', 'top-topics'] as const,
   auditEvents: (filters?: Record<string, unknown>) => ['audit', filters] as const,
+  notifications: (filters?: Record<string, unknown>) => ['notifications', filters] as const,
+  notificationCount: () => ['notifications', 'count'] as const,
 };
 
 // Environment Hooks
@@ -681,6 +685,89 @@ export function useAuditEvents(filters?: {
         params: filters,
       });
       return data.events || [];
+    },
+  });
+}
+
+// Notification Hooks
+export function useNotifications(filters?: {
+  type?: string;
+  severity?: string;
+  is_read?: boolean;
+  include_dismissed?: boolean;
+  limit?: number;
+}) {
+  return useQuery<NotificationListResponse>({
+    queryKey: queryKeys.notifications(filters),
+    queryFn: async () => {
+      const { data } = await api.get<NotificationListResponse>('/api/v1/notifications', {
+        params: filters,
+      });
+      return data;
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+}
+
+export function useNotificationCount() {
+  return useQuery<number>({
+    queryKey: queryKeys.notificationCount(),
+    queryFn: async () => {
+      const { data } = await api.get<NotificationCountResponse>('/api/v1/notifications/count');
+      return data.unread_count;
+    },
+    refetchInterval: 15000, // Refetch every 15 seconds
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      await api.post(`/api/v1/notifications/${notificationId}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await api.post('/api/v1/notifications/read-all');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useDismissNotification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      await api.post(`/api/v1/notifications/${notificationId}/dismiss`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useDismissAllNotifications() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await api.post('/api/v1/notifications/dismiss-all');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }

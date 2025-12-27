@@ -18,6 +18,7 @@ from app.services import (
     TenantService,
     TopicService,
 )
+from app.services.notification import NotificationService
 from app.services.cache import cache_service
 
 
@@ -119,6 +120,13 @@ async def get_audit_service(
     return AuditService(session)
 
 
+async def get_notification_service(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> NotificationService:
+    """Get notification service."""
+    return NotificationService(session)
+
+
 def get_session_id(
     request: Request,
     x_session_id: Annotated[str | None, Header()] = None,
@@ -151,5 +159,6 @@ SubscriptionSvc = Annotated[SubscriptionService, Depends(get_subscription_servic
 MessageBrowserSvc = Annotated[MessageBrowserService, Depends(get_message_browser_service)]
 BrokerSvc = Annotated[BrokerService, Depends(get_broker_service)]
 AuditSvc = Annotated[AuditService, Depends(get_audit_service)]
+NotificationSvc = Annotated[NotificationService, Depends(get_notification_service)]
 SessionId = Annotated[str, Depends(get_session_id)]
 RequestInfo = Annotated[dict, Depends(get_request_info)]

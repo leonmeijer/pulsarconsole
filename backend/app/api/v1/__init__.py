@@ -8,6 +8,7 @@ from app.api.v1 import (
     environment,
     messages,
     namespaces,
+    notifications,
     subscriptions,
     tenants,
     topics,
@@ -24,3 +25,4 @@ router.include_router(subscriptions.router)
 router.include_router(messages.router)
 router.include_router(brokers.router)
 router.include_router(audit.router)
+router.include_router(notifications.router)
