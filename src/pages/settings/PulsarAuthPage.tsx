@@ -20,6 +20,7 @@ import {
   Terminal,
   Copy,
   Check,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -38,7 +39,7 @@ import { ConfirmDialog } from '@/components/shared';
 import { cn } from '@/lib/utils';
 
 type TabType = 'status' | 'permissions' | 'sync' | 'config';
-type GuideSection = 'overview' | 'docker' | 'kubernetes' | 'standalone' | 'cluster' | 'token' | 'oidc';
+type GuideSection = 'overview' | 'docker' | 'kubernetes' | 'standalone' | 'cluster' | 'token' | 'oidc' | 'ai-prompt';
 
 function CodeBlock({ code, language = 'bash' }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);
@@ -80,6 +81,7 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
     { id: 'cluster', label: 'Cluster', icon: Server },
     { id: 'token', label: 'Token Secret Key', icon: Key },
     { id: 'oidc', label: 'OIDC Integration', icon: Lock },
+    { id: 'ai-prompt', label: 'AI Prompt', icon: Sparkles },
   ];
 
   return (
@@ -768,6 +770,116 @@ bin/pulsar tokens create \\
                       </p>
                     </div>
 
+                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                      <p className="font-medium text-green-500 mb-2">Recommended: JWKS for OIDC</p>
+                      <p className="text-sm text-green-400">
+                        When using OIDC, use the JWKS (JSON Web Key Set) endpoint instead of a static public key.
+                        JWKS provides automatic key rotation and eliminates manual key management.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <Key className="w-4 h-4 text-primary" />
+                        How JWKS Works
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        OIDC providers publish their public keys at a JWKS endpoint. Pulsar fetches these keys
+                        to validate JWT tokens. This enables automatic key rotation without broker restarts.
+                      </p>
+
+                      <div className="space-y-4">
+                        <div className="p-4 bg-zinc-800 rounded-lg">
+                          <p className="font-medium text-yellow-400 mb-2">1. Discovery URL → JWKS Endpoint</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Every OIDC provider has a discovery URL that contains the JWKS endpoint location:
+                          </p>
+                          <CodeBlock
+                            code={`# The OpenID Configuration URL
+https://your-provider.com/.well-known/openid-configuration
+
+# Returns JSON with jwks_uri field:
+{
+  "issuer": "https://your-provider.com",
+  "jwks_uri": "https://your-provider.com/.well-known/jwks.json",
+  "token_endpoint": "https://your-provider.com/oauth/token",
+  ...
+}`}
+                          />
+                        </div>
+
+                        <div className="p-4 bg-zinc-800 rounded-lg">
+                          <p className="font-medium text-yellow-400 mb-2">2. JWKS Endpoint Response</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            The JWKS endpoint returns a set of public keys used to sign tokens:
+                          </p>
+                          <CodeBlock
+                            code={`# GET https://your-provider.com/.well-known/jwks.json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "key-id-123",           # Key ID - matches 'kid' in JWT header
+      "alg": "RS256",                # Algorithm
+      "n": "0vx7agoebGc...",         # RSA modulus (public key component)
+      "e": "AQAB"                    # RSA exponent
+    },
+    {
+      "kty": "EC",
+      "use": "sig",
+      "kid": "key-id-456",
+      "alg": "ES256",
+      "crv": "P-256",
+      "x": "f83OJ3D2xF1Bg8vub...",
+      "y": "x_FEzRu9m36HLN_tue..."
+    }
+  ]
+}`}
+                          />
+                        </div>
+
+                        <div className="p-4 bg-zinc-800 rounded-lg">
+                          <p className="font-medium text-yellow-400 mb-2">3. Token Validation Flow</p>
+                          <div className="text-sm space-y-2 text-muted-foreground">
+                            <p>① Client sends JWT token to Pulsar broker</p>
+                            <p>② Broker reads <code className="text-primary">kid</code> (key ID) from JWT header</p>
+                            <p>③ Broker fetches JWKS from configured URL (with caching)</p>
+                            <p>④ Broker finds matching key by <code className="text-primary">kid</code></p>
+                            <p>⑤ Broker validates JWT signature using that public key</p>
+                            <p>⑥ If valid, broker extracts claims for authorization</p>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-zinc-800 rounded-lg">
+                          <p className="font-medium text-yellow-400 mb-2">4. Benefits of JWKS</p>
+                          <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                            <li><strong>Automatic Key Rotation:</strong> Provider can rotate keys without Pulsar restart</li>
+                            <li><strong>Multiple Keys:</strong> Support for key rollover with old and new keys active simultaneously</li>
+                            <li><strong>No Manual Key Distribution:</strong> No need to copy public keys to broker config</li>
+                            <li><strong>Standard Protocol:</strong> Works with any OIDC-compliant provider</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-3">Find Your JWKS URL</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Use curl to discover the JWKS endpoint from your OIDC provider:
+                      </p>
+                      <CodeBlock
+                        code={`# Fetch the OpenID Configuration
+curl -s https://your-provider.com/.well-known/openid-configuration | jq .jwks_uri
+
+# Example output:
+"https://your-provider.com/.well-known/jwks.json"
+
+# Verify the JWKS endpoint works
+curl -s https://your-provider.com/.well-known/jwks.json | jq .`}
+                      />
+                    </div>
+
                     <div>
                       <h4 className="font-medium mb-3">Step 1: Configure OIDC Provider</h4>
                       <p className="text-sm text-muted-foreground mb-3">
@@ -798,29 +910,52 @@ bin/pulsar tokens create \\
                     </div>
 
                     <div>
-                      <h4 className="font-medium mb-3">Step 2: Configure Pulsar Broker</h4>
+                      <h4 className="font-medium mb-3">Step 2: Configure Pulsar Broker with JWKS</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Point <code className="text-primary">tokenPublicKey</code> to your OIDC provider's JWKS endpoint:
+                      </p>
                       <CodeBlock
                         language="properties"
-                        code={`# broker.conf - OAuth2/OIDC Authentication
+                        code={`# broker.conf - OIDC Authentication with JWKS
 
 authenticationEnabled=true
 authenticationProviders=org.apache.pulsar.broker.authentication.AuthenticationProviderToken
 
-# Use JWKS URL from your OIDC provider
+# ============================================
+# JWKS Configuration (Recommended for OIDC)
+# ============================================
+# Point to your OIDC provider's JWKS endpoint
+# Pulsar will fetch public keys automatically and cache them
+# Keys are refreshed periodically to support rotation
+
 tokenPublicKey=https://your-provider.com/.well-known/jwks.json
 
-# Or use the issuer URL (Pulsar will fetch JWKS automatically)
+# Alternative: Use file:// for a local JWKS file (not recommended)
+# tokenPublicKey=file:///path/to/jwks.json
+
+# ============================================
+# JWT Claims Configuration
+# ============================================
+# Which claim to use as the "principal" (user/role identity)
 tokenAuthClaim=sub
+
+# Audience validation (must match 'aud' claim in token)
 tokenAudienceClaim=aud
 tokenAudience=pulsar
 
+# ============================================
 # Authorization
+# ============================================
 authorizationEnabled=true
-superUserRoles=pulsar-admin
+superUserRoles=pulsar-admin,admin@your-provider.com
 
-# For providers that include roles in token
+# Allow functions/connectors operations
 authorizationAllowFunctionOps=true`}
                       />
+                      <p className="text-sm text-muted-foreground mt-3">
+                        Pulsar caches JWKS responses and automatically refreshes them. When your OIDC provider
+                        rotates keys, Pulsar will pick up the new keys without requiring a restart.
+                      </p>
                     </div>
 
                     <div>
@@ -903,6 +1038,130 @@ bin/pulsar-admin namespaces grant-permission my-tenant/my-namespace \\
   --role "oidc-group:analytics-team" \\
   --actions consume`}
                       />
+                    </div>
+                  </div>
+                )}
+
+                {activeSection === 'ai-prompt' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <Sparkles className="text-primary" />
+                        AI Configuration Prompt
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Copy this prompt and paste it into an AI assistant (like Claude, ChatGPT, or Copilot)
+                        to get help configuring Pulsar authentication for your specific environment.
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                      <p className="font-medium text-blue-500 mb-2">How to Use</p>
+                      <ol className="text-sm text-blue-400 space-y-1 list-decimal list-inside">
+                        <li>Copy the prompt below using the copy button</li>
+                        <li>Paste it into your preferred AI assistant</li>
+                        <li>Answer the AI's questions about your environment</li>
+                        <li>Follow the generated configuration instructions</li>
+                      </ol>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-3">Complete Configuration Prompt</h4>
+                      <CodeBlock
+                        language="markdown"
+                        code={`# Apache Pulsar Authentication & Authorization Configuration
+
+Help me configure authentication and authorization for Apache Pulsar.
+
+## My Environment
+Please ask me about:
+1. **Deployment type**: Docker, Kubernetes/OpenShift/OKD, Standalone, or Cluster
+2. **Authentication method**: JWT with secret key, JWT with public/private key pair, or OIDC
+3. **OIDC provider** (if applicable): Keycloak, Auth0, Zitadel, Okta, or other
+4. **OIDC Discovery URL** (if applicable): e.g., https://auth.example.com/.well-known/openid-configuration
+
+## Configuration Requirements
+
+### 1. Broker Configuration (broker.conf)
+Generate the complete broker.conf settings for:
+- \`authenticationEnabled\`: Enable authentication
+- \`authorizationEnabled\`: Enable authorization
+- \`authenticationProviders\`: The authentication provider class
+- \`tokenSecretKey\` or \`tokenPublicKey\`: Key configuration
+- \`superUserRoles\`: Admin roles
+- \`tokenAuthClaim\`: JWT claim for user identity
+- \`tokenAudienceClaim\` and \`tokenAudience\`: Audience validation
+
+### 2. Key Management
+Based on my authentication method:
+- **Symmetric key**: Generate a secure secret key and show how to store it
+- **Asymmetric keys**: Show how to generate RSA/EC key pairs
+- **OIDC/JWKS**: Configure the JWKS endpoint URL from my provider
+
+### 3. Deployment-Specific Instructions
+For my deployment type, provide:
+- **Docker**: Environment variables (PULSAR_PREFIX_*) and volume mounts
+- **Docker Compose**: Complete docker-compose.yml snippet
+- **Kubernetes**: Secret, ConfigMap, and StatefulSet/Deployment manifests
+- **Helm**: values.yaml configuration for the official Pulsar Helm chart
+- **Standalone**: Step-by-step broker.conf changes and restart commands
+- **Cluster**: Rolling restart procedure and shared key distribution
+
+### 4. Token Generation
+Show me how to generate tokens for:
+- Admin/superuser access
+- Regular client access
+- With specific claims for authorization
+
+### 5. Client Configuration
+Provide examples for:
+- pulsar-admin CLI authentication parameters
+- Java/Python client connection with authentication
+- OAuth2 client credentials flow (if using OIDC)
+
+### 6. Permission Management
+Show how to:
+- Grant namespace permissions to roles
+- Grant topic-level permissions
+- List current permissions
+- Revoke permissions
+
+### 7. Verification Steps
+Provide commands to verify:
+- Authentication is working
+- Authorization is enforced
+- Token validation is correct
+
+## OIDC-Specific (if applicable)
+
+If I'm using OIDC, also include:
+1. How to discover the JWKS endpoint from the discovery URL
+2. JWT claims mapping (sub, aud, preferred_username, etc.)
+3. Token audience configuration
+4. Key rotation handling
+5. Example of obtaining a token via client credentials grant
+
+## Output Format
+
+Please provide:
+1. A clear step-by-step guide
+2. All configuration files with comments explaining each setting
+3. Commands to test each step
+4. Troubleshooting tips for common issues
+
+Start by asking me about my deployment type and authentication method.`}
+                      />
+                    </div>
+
+                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                      <p className="font-medium text-yellow-500 mb-2">Tips for Better Results</p>
+                      <ul className="text-sm text-yellow-400 space-y-1 list-disc list-inside">
+                        <li>Be specific about your Pulsar version (e.g., 3.0, 2.11)</li>
+                        <li>Mention if you're using the official Helm chart or a custom deployment</li>
+                        <li>For OIDC, have your discovery URL ready</li>
+                        <li>Specify if you need mTLS in addition to token authentication</li>
+                        <li>Mention any existing configuration you want to preserve</li>
+                      </ul>
                     </div>
                   </div>
                 )}
