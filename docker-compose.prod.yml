@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - REDIS_URL=redis://redis:6379/0
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - PULSAR_ADMIN_URL=${PULSAR_ADMIN_URL:-http://pulsar:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker.celery_app worker -l info -c 4
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - REDIS_URL=redis://redis:6379/0
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - PULSAR_ADMIN_URL=${PULSAR_ADMIN_URL:-http://pulsar:8080}
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker.celery_app beat -l info
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: pulsar
+      POSTGRES_PASSWORD: pulsar
+      POSTGRES_DB: pulsar_manager
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar_manager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
+    networks:
+      - pulsar-manager
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  pulsar-manager:
+    driver: bridge

@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: pulsar-manager-postgres
+    environment:
+      POSTGRES_USER: pulsar
+      POSTGRES_PASSWORD: pulsar
+      POSTGRES_DB: pulsar_manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar_manager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Redis Cache
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: pulsar-manager-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Apache Pulsar (Standalone mode for development)
+  # ==========================================================================
+  pulsar:
+    image: apachepulsar/pulsar:3.3.2
+    container_name: pulsar-manager-pulsar
+    command: bin/pulsar standalone
+    ports:
+      - "6650:6650"   # Pulsar binary protocol
+      - "8080:8080"   # Pulsar Admin REST API
+    environment:
+      PULSAR_MEM: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
+    volumes:
+      - pulsar_data:/pulsar/data
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Pulsar Manager API (FastAPI)
+  # ==========================================================================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulsar-manager-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - REDIS_URL=redis://redis:6379/0
+      - PULSAR_ADMIN_URL=http://pulsar:8080
+      - PULSAR_SERVICE_URL=pulsar://pulsar:6650
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # ==========================================================================
+  # Celery Worker (Background Tasks)
+  # ==========================================================================
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulsar-manager-worker
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - REDIS_URL=redis://redis:6379/0
+      - PULSAR_ADMIN_URL=http://pulsar:8080
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # ==========================================================================
+  # Celery Beat (Task Scheduler)
+  # ==========================================================================
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulsar-manager-beat
+    command: celery -A app.worker.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - worker
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # ==========================================================================
+  # Frontend (React + Vite)
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: pulsar-manager-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+  redis_data:
+  pulsar_data:
+
+networks:
+  default:
+    name: pulsar-manager-network

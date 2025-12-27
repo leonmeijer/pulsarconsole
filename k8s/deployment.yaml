@@ -1,0 +1,202 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pulsar-manager
+  labels:
+    app: pulsar-manager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pulsar-manager
+  template:
+    metadata:
+      labels:
+        app: pulsar-manager
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: pulsar-manager:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: redis-url
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: encryption-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulsar-manager
+  labels:
+    app: pulsar-manager
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8000
+      name: http
+  selector:
+    app: pulsar-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pulsar-manager-worker
+  labels:
+    app: pulsar-manager-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pulsar-manager-worker
+  template:
+    metadata:
+      labels:
+        app: pulsar-manager-worker
+    spec:
+      containers:
+        - name: worker
+          image: pulsar-manager:latest
+          command: ["celery", "-A", "app.worker.celery_app", "worker", "-l", "info"]
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: redis-url
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: encryption-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pulsar-manager-beat
+  labels:
+    app: pulsar-manager-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pulsar-manager-beat
+  template:
+    metadata:
+      labels:
+        app: pulsar-manager-beat
+    spec:
+      containers:
+        - name: beat
+          image: pulsar-manager:latest
+          command: ["celery", "-A", "app.worker.celery_app", "beat", "-l", "info"]
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-manager-secrets
+                  key: redis-url
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pulsar-manager
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - pulsar-manager.example.com
+      secretName: pulsar-manager-tls
+  rules:
+    - host: pulsar-manager.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pulsar-manager
+                port:
+                  number: 80
