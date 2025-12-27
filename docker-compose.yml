@@ -1,33 +1,43 @@
 version: '3.8'
 
+# =============================================================================
+# Pulsar Console - Development Environment
+# =============================================================================
+# Usage:
+#   docker compose up -d                    # Start infrastructure only
+#   docker compose --profile full up -d     # Start everything including app
+# =============================================================================
+
 services:
   # ==========================================================================
   # PostgreSQL Database
   # ==========================================================================
   postgres:
     image: postgres:16-alpine
-    container_name: pulsar-manager-postgres
+    container_name: pulsar-console-postgres
     environment:
       POSTGRES_USER: pulsar
       POSTGRES_PASSWORD: pulsar
-      POSTGRES_DB: pulsar_manager
+      POSTGRES_DB: pulsar_console
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar_manager"]
+      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar_console"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - pulsar-console
 
   # ==========================================================================
   # Redis Cache
   # ==========================================================================
   redis:
     image: redis:7-alpine
-    container_name: pulsar-manager-redis
+    container_name: pulsar-console-redis
     ports:
       - "6379:6379"
     volumes:
@@ -38,13 +48,15 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - pulsar-console
 
   # ==========================================================================
   # Apache Pulsar (Standalone mode for development)
   # ==========================================================================
   pulsar:
     image: apachepulsar/pulsar:3.3.2
-    container_name: pulsar-manager-pulsar
+    container_name: pulsar-console-pulsar
     command: bin/pulsar standalone
     ports:
       - "6650:6650"   # Pulsar binary protocol
@@ -60,24 +72,31 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - pulsar-console
 
   # ==========================================================================
-  # Pulsar Manager API (FastAPI)
+  # Pulsar Console API (FastAPI)
   # ==========================================================================
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: pulsar-manager-api
+    container_name: pulsar-console-api
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - APP_NAME=pulsar-console
+      - APP_ENV=development
+      - DEBUG=true
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - PULSAR_ADMIN_URL=http://pulsar:8080
       - PULSAR_SERVICE_URL=pulsar://pulsar:6650
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ENCRYPTION_KEY=dev-encryption-key-change-in-prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,6 +110,8 @@ services:
       timeout: 10s
       retries: 3
     restart: unless-stopped
+    networks:
+      - pulsar-console
     profiles:
       - full
 
@@ -101,14 +122,17 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: pulsar-manager-worker
+    container_name: pulsar-console-worker
     command: celery -A app.worker.celery_app worker --loglevel=info
     environment:
-      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - APP_ENV=development
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - PULSAR_ADMIN_URL=http://pulsar:8080
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ENCRYPTION_KEY=dev-encryption-key-change-in-prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,6 +141,8 @@ services:
       pulsar:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - pulsar-console
     profiles:
       - full
 
@@ -127,32 +153,37 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: pulsar-manager-beat
+    container_name: pulsar-console-beat
     command: celery -A app.worker.celery_app beat --loglevel=info
     environment:
-      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
+      - APP_ENV=development
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     depends_on:
       - worker
     restart: unless-stopped
+    networks:
+      - pulsar-console
     profiles:
       - full
 
   # ==========================================================================
-  # Frontend (React + Vite)
+  # Frontend (React + Vite) - Production build
   # ==========================================================================
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: pulsar-manager-frontend
+    container_name: pulsar-console-frontend
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       - api
     restart: unless-stopped
+    networks:
+      - pulsar-console
     profiles:
       - full
 
@@ -162,5 +193,6 @@ volumes:
   pulsar_data:
 
 networks:
-  default:
-    name: pulsar-manager-network
+  pulsar-console:
+    name: pulsar-console-network
+    driver: bridge

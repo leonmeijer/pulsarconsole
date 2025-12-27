@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pulsar-console
+  labels:
+    app.kubernetes.io/name: pulsar-console
+    app.kubernetes.io/part-of: pulsar-console

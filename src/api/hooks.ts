@@ -120,6 +120,34 @@ export function useActivateEnvironment() {
   });
 }
 
+export function useUpdateEnvironment() {
+  const queryClient = useQueryClient();
+  return useMutation<Environment, Error, { name: string; data: Partial<EnvironmentCreate> }>({
+    mutationFn: async ({ name, data: updateData }) => {
+      const { data } = await api.put<Environment>(`/api/v1/environment/${name}`, updateData);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.environment });
+      queryClient.invalidateQueries({ queryKey: queryKeys.environments });
+    },
+  });
+}
+
+export function useDeleteEnvironment() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (name) => {
+      const { data } = await api.delete<SuccessResponse>(`/api/v1/environment/${name}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.environment });
+      queryClient.invalidateQueries({ queryKey: queryKeys.environments });
+    },
+  });
+}
+
 // Tenant Hooks
 export function useTenants(options: { useCache?: boolean; paused?: boolean } = {}) {
   const { useCache = true, paused = false } = options;
@@ -649,7 +677,7 @@ export function useAuditEvents(filters?: {
   return useQuery<AuditEvent[]>({
     queryKey: queryKeys.auditEvents(filters),
     queryFn: async () => {
-      const { data } = await api.get<AuditEventListResponse>('/api/v1/audit', {
+      const { data } = await api.get<AuditEventListResponse>('/api/v1/audit/events', {
         params: filters,
       });
       return data.events || [];

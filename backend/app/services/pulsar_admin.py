@@ -523,6 +523,7 @@ class PulsarAdminService:
         topic: str,
         subscription: str,
         position: str = "latest",
+        replicated: bool = False,
     ) -> None:
         """Create a subscription."""
         parts = topic.replace("://", "/").split("/")
@@ -530,10 +531,14 @@ class PulsarAdminService:
             raise ValidationError(f"Invalid topic name: {topic}")
 
         topic_type, tenant, namespace, topic_name = parts
+        params = {
+            "initialPosition": position,
+            "replicated": str(replicated).lower(),
+        }
         response = await self._request(
             "PUT",
             f"/admin/v2/{topic_type}/{tenant}/{namespace}/{topic_name}/subscription/{subscription}",
-            params={"initialPosition": position},
+            params=params,
         )
         self._handle_response(response, "subscription")
 

@@ -316,7 +316,7 @@ export const handlers = [
     }),
 
     // Audit
-    http.get('/api/v1/audit', () => {
+    http.get('/api/v1/audit/events', () => {
         return HttpResponse.json({
             events: mockAuditEvents,
             total: mockAuditEvents.length,

@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pulsar-console
+
+resources:
+  - ../k8s/base/namespace.yaml
+  - ../k8s/base/configmap.yaml
+  - ../k8s/base/secret.yaml
+  - ../k8s/base/serviceaccount.yaml
+  - ../k8s/base/api-deployment.yaml
+  - ../k8s/base/frontend-deployment.yaml
+  - ../k8s/base/worker-deployment.yaml
+  - route.yaml
+  - imagestream.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.openshift.io/runtime: python
+
+# Patches for OpenShift compatibility
+patches:
+  # Remove securityContext.runAsUser to let OpenShift assign UIDs
+  - target:
+      kind: Deployment
+      name: pulsar-console-api
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsUser
+      - op: remove
+        path: /spec/template/spec/securityContext/fsGroup
+  - target:
+      kind: Deployment
+      name: pulsar-console-frontend
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsUser
+      - op: remove
+        path: /spec/template/spec/securityContext/fsGroup
+  - target:
+      kind: Deployment
+      name: pulsar-console-worker
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsUser
+      - op: remove
+        path: /spec/template/spec/securityContext/fsGroup
+  - target:
+      kind: Deployment
+      name: pulsar-console-beat
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsUser
+      - op: remove
+        path: /spec/template/spec/securityContext/fsGroup

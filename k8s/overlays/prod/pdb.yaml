@@ -1,0 +1,27 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pulsar-console-api-pdb
+  labels:
+    app.kubernetes.io/name: pulsar-console
+    app.kubernetes.io/component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pulsar-console
+      app.kubernetes.io/component: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pulsar-console-frontend-pdb
+  labels:
+    app.kubernetes.io/name: pulsar-console
+    app.kubernetes.io/component: frontend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pulsar-console
+      app.kubernetes.io/component: frontend

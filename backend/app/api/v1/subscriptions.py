@@ -75,7 +75,8 @@ async def create_subscription(
         topic=topic,
         subscription=data.name,
         persistent=persistent,
-        message_id=data.message_id,
+        initial_position=data.initial_position,
+        replicated=data.replicated,
     )
 
     # Log audit event
@@ -83,7 +84,10 @@ async def create_subscription(
     await audit.log_create(
         resource_type=ResourceType.SUBSCRIPTION,
         resource_id=f"{persistence}://{tenant}/{namespace}/{topic}/{data.name}",
-        details={"message_id": data.message_id},
+        details={
+            "initial_position": data.initial_position,
+            "replicated": data.replicated,
+        },
         **request_info,
     )
 

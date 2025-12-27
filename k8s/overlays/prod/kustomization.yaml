@@ -1,0 +1,73 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pulsar-console
+
+resources:
+  - ../../base
+  - pdb.yaml
+
+commonLabels:
+  environment: production
+
+# Production replicas
+replicas:
+  - name: pulsar-console-api
+    count: 3
+  - name: pulsar-console-frontend
+    count: 2
+  - name: pulsar-console-worker
+    count: 2
+
+# Production configuration patches
+patches:
+  - target:
+      kind: ConfigMap
+      name: pulsar-console-config
+    patch: |-
+      - op: replace
+        path: /data/WORKERS
+        value: "4"
+      - op: replace
+        path: /data/LOG_FORMAT
+        value: "json"
+  - target:
+      kind: Ingress
+      name: pulsar-console
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: pulsar-console.example.com
+      - op: add
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-prod
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts:
+              - pulsar-console.example.com
+            secretName: pulsar-console-tls
+  # Increase resources for production
+  - target:
+      kind: Deployment
+      name: pulsar-console-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 250m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 512Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 1000m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 1Gi
+
+# Use production images
+images:
+  - name: ghcr.io/leonmeijer/pulsar-console-api
+    newTag: v1.0.0
+  - name: ghcr.io/leonmeijer/pulsar-console-frontend
+    newTag: v1.0.0

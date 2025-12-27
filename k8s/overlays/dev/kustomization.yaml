@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pulsar-console-dev
+
+resources:
+  - ../../base
+
+nameSuffix: -dev
+
+commonLabels:
+  environment: development
+
+# Override replicas for development
+replicas:
+  - name: pulsar-console-api
+    count: 1
+  - name: pulsar-console-frontend
+    count: 1
+  - name: pulsar-console-worker
+    count: 1
+
+# Override configmap for development
+patches:
+  - target:
+      kind: ConfigMap
+      name: pulsar-console-config
+    patch: |-
+      - op: replace
+        path: /data/DEBUG
+        value: "true"
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: "DEBUG"
+  - target:
+      kind: Ingress
+      name: pulsar-console
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: pulsar-console-dev.example.com
+  - target:
+      kind: Namespace
+      name: pulsar-console
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: pulsar-console-dev
+
+# Use development images
+images:
+  - name: ghcr.io/leonmeijer/pulsar-console-api
+    newTag: dev
+  - name: ghcr.io/leonmeijer/pulsar-console-frontend
+    newTag: dev

@@ -207,7 +207,8 @@ export interface SubscriptionDetail extends Subscription {
 
 export interface SubscriptionCreate {
   name: string;
-  message_id?: string;
+  initial_position?: 'earliest' | 'latest';
+  replicated?: boolean;
 }
 
 // Broker Types

@@ -27,9 +27,13 @@ class SubscriptionBase(BaseSchema):
 class SubscriptionCreate(SubscriptionBase):
     """Schema for creating a subscription."""
 
-    message_id: str = Field(
+    initial_position: str = Field(
         default="latest",
-        description="Initial position (earliest/latest or messageId)",
+        description="Initial position: 'earliest' (start from first message) or 'latest' (start from new messages)",
+    )
+    replicated: bool = Field(
+        default=False,
+        description="Enable geo-replication for this subscription",
     )
 
 

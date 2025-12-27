@@ -1,0 +1,55 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pulsar-console
+  labels:
+    app.kubernetes.io/name: pulsar-console
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Uncomment for TLS with cert-manager
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  # Uncomment for TLS
+  # tls:
+  #   - hosts:
+  #       - pulsar-console.example.com
+  #     secretName: pulsar-console-tls
+  rules:
+    - host: pulsar-console.example.com
+      http:
+        paths:
+          # Frontend - serves the React app
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pulsar-console-frontend
+                port:
+                  number: 8080
+          # API - backend endpoints
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: pulsar-console-api
+                port:
+                  number: 8000
+          # Health endpoints
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: pulsar-console-api
+                port:
+                  number: 8000
+          # Metrics endpoint
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: pulsar-console-api
+                port:
+                  number: 8000

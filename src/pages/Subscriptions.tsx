@@ -10,7 +10,10 @@ import {
     ChevronDown,
     ChevronRight,
     Radio,
-    ExternalLink
+    ExternalLink,
+    Info,
+    Clock,
+    Globe
 } from "lucide-react";
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
@@ -21,7 +24,7 @@ import {
     useCreateSubscription,
     useSkipAllMessages
 } from "@/api/hooks";
-import type { Subscription, Consumer } from "@/api/types";
+import type { Subscription, Consumer, SubscriptionCreate } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/shared";
 
@@ -239,6 +242,8 @@ export default function SubscriptionsPage() {
 
     const [showCreate, setShowCreate] = useState(false);
     const [newSubName, setNewSubName] = useState("");
+    const [initialPosition, setInitialPosition] = useState<'earliest' | 'latest'>('latest');
+    const [replicated, setReplicated] = useState(false);
 
     const { data: subscriptions, isLoading, refetch } = useSubscriptions(
         tenant || "",
@@ -258,9 +263,16 @@ export default function SubscriptionsPage() {
             return;
         }
         try {
-            await createSubscription.mutateAsync({ name: newSubName.trim() });
+            const createData: SubscriptionCreate = {
+                name: newSubName.trim(),
+                initial_position: initialPosition,
+                replicated: replicated,
+            };
+            await createSubscription.mutateAsync(createData);
             toast.success(`Subscription '${newSubName}' created`);
             setNewSubName("");
+            setInitialPosition('latest');
+            setReplicated(false);
             setShowCreate(false);
         } catch (error) {
             toast.error("Failed to create subscription");
@@ -350,27 +362,136 @@ export default function SubscriptionsPage() {
                     className="glass p-6 rounded-2xl"
                 >
                     <h3 className="text-lg font-semibold mb-4">Create New Subscription</h3>
-                    <div className="flex gap-4">
-                        <input
-                            type="text"
-                            value={newSubName}
-                            onChange={(e) => setNewSubName(e.target.value)}
-                            placeholder="Subscription name"
-                            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
-                        />
-                        <button
-                            onClick={handleCreate}
-                            disabled={createSubscription.isPending}
-                            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
-                        >
-                            {createSubscription.isPending ? "Creating..." : "Create"}
-                        </button>
-                        <button
-                            onClick={() => setShowCreate(false)}
-                            className="px-6 py-2 bg-white/10 rounded-lg hover:bg-white/20"
-                        >
-                            Cancel
-                        </button>
+
+                    <div className="space-y-5">
+                        {/* Subscription Name */}
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                Subscription Name *
+                            </label>
+                            <input
+                                type="text"
+                                value={newSubName}
+                                onChange={(e) => setNewSubName(e.target.value)}
+                                placeholder="e.g., my-subscription"
+                                className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
+                            />
+                        </div>
+
+                        {/* Initial Position */}
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                <div className="flex items-center gap-2">
+                                    <Clock size={14} />
+                                    Initial Position
+                                </div>
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setInitialPosition('latest')}
+                                    className={cn(
+                                        "p-4 rounded-xl border transition-all text-left",
+                                        initialPosition === 'latest'
+                                            ? "border-primary bg-primary/10"
+                                            : "border-white/10 bg-white/5 hover:bg-white/10"
+                                    )}
+                                >
+                                    <div className="font-medium">Latest</div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        Start consuming from new messages only
+                                    </div>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setInitialPosition('earliest')}
+                                    className={cn(
+                                        "p-4 rounded-xl border transition-all text-left",
+                                        initialPosition === 'earliest'
+                                            ? "border-primary bg-primary/10"
+                                            : "border-white/10 bg-white/5 hover:bg-white/10"
+                                    )}
+                                >
+                                    <div className="font-medium">Earliest</div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        Start consuming from the first available message
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Geo-Replication */}
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                <div className="flex items-center gap-2">
+                                    <Globe size={14} />
+                                    Geo-Replication
+                                </div>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setReplicated(!replicated)}
+                                className={cn(
+                                    "w-full p-4 rounded-xl border transition-all text-left flex items-center justify-between",
+                                    replicated
+                                        ? "border-primary bg-primary/10"
+                                        : "border-white/10 bg-white/5 hover:bg-white/10"
+                                )}
+                            >
+                                <div>
+                                    <div className="font-medium">Replicated Subscription</div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        Enable geo-replication for this subscription across clusters
+                                    </div>
+                                </div>
+                                <div className={cn(
+                                    "w-12 h-6 rounded-full transition-colors relative",
+                                    replicated ? "bg-primary" : "bg-white/20"
+                                )}>
+                                    <div className={cn(
+                                        "absolute top-1 w-4 h-4 rounded-full bg-white transition-all",
+                                        replicated ? "left-7" : "left-1"
+                                    )} />
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Subscription Type Info */}
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                            <div className="flex items-start gap-3">
+                                <Info size={18} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <div className="font-medium text-blue-400">About Subscription Types</div>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        The subscription type (Exclusive, Shared, Failover, Key_Shared) is determined
+                                        by the first consumer that connects to this subscription, not during creation.
+                                        Configure the subscription type in your consumer client code.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={handleCreate}
+                                disabled={createSubscription.isPending || !newSubName.trim()}
+                                className="flex-1 px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                                {createSubscription.isPending ? "Creating..." : "Create Subscription"}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowCreate(false);
+                                    setNewSubName("");
+                                    setInitialPosition('latest');
+                                    setReplicated(false);
+                                }}
+                                className="px-6 py-2.5 bg-white/10 rounded-lg hover:bg-white/20"
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </motion.div>
             )}

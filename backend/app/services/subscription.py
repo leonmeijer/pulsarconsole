@@ -176,7 +176,8 @@ class SubscriptionService:
         topic: str,
         subscription: str,
         persistent: bool = True,
-        message_id: str = "latest",
+        initial_position: str = "latest",
+        replicated: bool = False,
     ) -> dict[str, Any]:
         """Create a new subscription."""
         # Validate name
@@ -187,7 +188,7 @@ class SubscriptionService:
 
         # Create subscription
         await self.pulsar.create_subscription(
-            full_topic, subscription, message_id
+            full_topic, subscription, initial_position, replicated
         )
 
         # Invalidate cache
@@ -197,13 +198,15 @@ class SubscriptionService:
             "Subscription created",
             topic=full_topic,
             subscription=subscription,
-            message_id=message_id,
+            initial_position=initial_position,
+            replicated=replicated,
         )
 
         return {
             "name": subscription,
             "topic": full_topic,
-            "message_id": message_id,
+            "initial_position": initial_position,
+            "replicated": replicated,
         }
 
     async def delete_subscription(

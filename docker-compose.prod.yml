@@ -1,19 +1,42 @@
 version: '3.8'
 
+# =============================================================================
+# Pulsar Console - Production Environment
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Required environment variables (set in .env or shell):
+#   - ENCRYPTION_KEY: Generate with `openssl rand -hex 32`
+#   - SECRET_KEY: Generate with `openssl rand -hex 32`
+#   - PULSAR_ADMIN_URL: Your Pulsar cluster admin URL
+#   - POSTGRES_PASSWORD: Database password
+#   - REDIS_PASSWORD: Redis password (optional)
+# =============================================================================
+
 services:
+  # ==========================================================================
+  # Pulsar Console API
+  # ==========================================================================
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/leonmeijer/pulsar-console-api:${VERSION:-latest}
     ports:
       - "8000:8000"
     environment:
+      - APP_NAME=pulsar-console
       - APP_ENV=production
       - DEBUG=false
-      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
-      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - DATABASE_URL=postgresql+asyncpg://pulsar:${POSTGRES_PASSWORD}@postgres:5432/pulsar_console
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-}@redis:6379/2
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SECRET_KEY=${SECRET_KEY}
       - PULSAR_ADMIN_URL=${PULSAR_ADMIN_URL:-http://pulsar:8080}
+      - PULSAR_AUTH_TOKEN=${PULSAR_AUTH_TOKEN:-}
+      - WORKERS=4
     depends_on:
       postgres:
         condition: service_healthy
@@ -25,75 +48,121 @@ services:
       timeout: 10s
       retries: 3
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     networks:
-      - pulsar-manager
+      - pulsar-console
 
+  # ==========================================================================
+  # Celery Worker
+  # ==========================================================================
   worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: celery -A app.worker.celery_app worker -l info -c 4
+    image: ghcr.io/leonmeijer/pulsar-console-api:${VERSION:-latest}
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
     environment:
       - APP_ENV=production
-      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://pulsar:${POSTGRES_PASSWORD}@postgres:5432/pulsar_console
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-}@redis:6379/2
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SECRET_KEY=${SECRET_KEY}
       - PULSAR_ADMIN_URL=${PULSAR_ADMIN_URL:-http://pulsar:8080}
+      - PULSAR_AUTH_TOKEN=${PULSAR_AUTH_TOKEN:-}
     depends_on:
       - api
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     networks:
-      - pulsar-manager
+      - pulsar-console
 
+  # ==========================================================================
+  # Celery Beat
+  # ==========================================================================
   beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: celery -A app.worker.celery_app beat -l info
+    image: ghcr.io/leonmeijer/pulsar-console-api:${VERSION:-latest}
+    command: celery -A app.worker.celery_app beat --loglevel=info
     environment:
       - APP_ENV=production
-      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_manager
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://pulsar:${POSTGRES_PASSWORD}@postgres:5432/pulsar_console
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-}@redis:6379/2
     depends_on:
       - api
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
     networks:
-      - pulsar-manager
+      - pulsar-console
 
+  # ==========================================================================
+  # Frontend
+  # ==========================================================================
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
+    image: ghcr.io/leonmeijer/pulsar-console-frontend:${VERSION:-latest}
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       - api
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
     networks:
-      - pulsar-manager
+      - pulsar-console
 
+  # ==========================================================================
+  # PostgreSQL
+  # ==========================================================================
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: pulsar
-      POSTGRES_PASSWORD: pulsar
-      POSTGRES_DB: pulsar_manager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: pulsar_console
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar_manager"]
+      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar_console"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
     networks:
-      - pulsar-manager
+      - pulsar-console
 
+  # ==========================================================================
+  # Redis
+  # ==========================================================================
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -102,28 +171,39 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
     networks:
-      - pulsar-manager
+      - pulsar-console
 
+  # ==========================================================================
+  # Nginx Reverse Proxy (optional - for TLS termination)
+  # ==========================================================================
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx-frontend.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - api
       - frontend
     restart: unless-stopped
     networks:
-      - pulsar-manager
+      - pulsar-console
+    profiles:
+      - with-nginx
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  pulsar-manager:
+  pulsar-console:
+    name: pulsar-console-network
     driver: bridge

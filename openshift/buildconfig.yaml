@@ -1,0 +1,58 @@
+# BuildConfig for building from source in OpenShift
+# Use this if you want to build images directly in OpenShift instead of using pre-built images
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: pulsar-console-api
+  labels:
+    app.kubernetes.io/name: pulsar-console
+    app.kubernetes.io/component: api
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/leonmeijer/pulsarconsole.git
+      ref: main
+    contextDir: backend
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: pulsar-console-api:latest
+  triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secretReference:
+          name: github-webhook-secret
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: pulsar-console-frontend
+  labels:
+    app.kubernetes.io/name: pulsar-console
+    app.kubernetes.io/component: frontend
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/leonmeijer/pulsarconsole.git
+      ref: main
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile.frontend
+  output:
+    to:
+      kind: ImageStreamTag
+      name: pulsar-console-frontend:latest
+  triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secretReference:
+          name: github-webhook-secret
