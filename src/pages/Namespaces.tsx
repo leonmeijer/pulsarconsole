@@ -7,6 +7,7 @@ import { useNamespaces, useCreateNamespace, useDeleteNamespace } from "@/api/hoo
 import type { Namespace, NamespacePolicies } from "@/api/types";
 import { NamespacePolicyEditor } from "@/components/shared";
 import { useFavorites } from "@/context/FavoritesContext";
+import { PermissionGate } from "@/components/auth";
 
 export default function NamespacesPage() {
     const { tenant } = useParams<{ tenant: string }>();
@@ -92,13 +93,15 @@ export default function NamespacesPage() {
                     >
                         <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
                     </button>
-                    <button
-                        onClick={() => setShowCreate(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 font-semibold"
-                    >
-                        <Plus size={20} />
-                        Create Namespace
-                    </button>
+                    <PermissionGate action="write" resourceLevel="namespace" resourcePath={tenant}>
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 font-semibold"
+                        >
+                            <Plus size={20} />
+                            Create Namespace
+                        </button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -175,20 +178,24 @@ export default function NamespacesPage() {
                                             fill={isFavorite('namespace', ns.namespace, tenant) ? "currentColor" : "none"}
                                         />
                                     </button>
-                                    <button
-                                        onClick={() => setEditingNamespace(ns)}
-                                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                                        title="Edit Policies"
-                                    >
-                                        <Settings size={18} className="text-muted-foreground hover:text-primary" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(ns.namespace)}
-                                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={18} className="text-muted-foreground hover:text-red-400" />
-                                    </button>
+                                    <PermissionGate action="admin" resourceLevel="namespace" resourcePath={`${tenant}/${ns.namespace}`}>
+                                        <button
+                                            onClick={() => setEditingNamespace(ns)}
+                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                            title="Edit Policies"
+                                        >
+                                            <Settings size={18} className="text-muted-foreground hover:text-primary" />
+                                        </button>
+                                    </PermissionGate>
+                                    <PermissionGate action="write" resourceLevel="namespace" resourcePath={`${tenant}/${ns.namespace}`}>
+                                        <button
+                                            onClick={() => handleDelete(ns.namespace)}
+                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={18} className="text-muted-foreground hover:text-red-400" />
+                                        </button>
+                                    </PermissionGate>
                                 </div>
                             </div>
 

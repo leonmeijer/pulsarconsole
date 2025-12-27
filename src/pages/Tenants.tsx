@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useTenants, useCreateTenant, useDeleteTenant } from "@/api/hooks";
 import { useFavorites } from "@/context/FavoritesContext";
+import { PermissionGate } from "@/components/auth";
 
 export default function TenantsPage() {
     const [isPaused, setIsPaused] = useState(false);
@@ -68,13 +69,15 @@ export default function TenantsPage() {
                     >
                         <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
                     </button>
-                    <button
-                        onClick={() => setShowCreate(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 font-semibold"
-                    >
-                        <Plus size={20} />
-                        Create Tenant
-                    </button>
+                    <PermissionGate action="write" resourceLevel="tenant">
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 font-semibold"
+                        >
+                            <Plus size={20} />
+                            Create Tenant
+                        </button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -146,13 +149,15 @@ export default function TenantsPage() {
                                             fill={isFavorite('tenant', tenant.name) ? "currentColor" : "none"}
                                         />
                                     </button>
-                                    <button
-                                        onClick={() => handleDelete(tenant.name)}
-                                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={18} className="text-muted-foreground hover:text-red-400" />
-                                    </button>
+                                    <PermissionGate action="write" resourceLevel="tenant" resourcePath={tenant.name}>
+                                        <button
+                                            onClick={() => handleDelete(tenant.name)}
+                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={18} className="text-muted-foreground hover:text-red-400" />
+                                        </button>
+                                    </PermissionGate>
                                 </div>
                             </div>
 

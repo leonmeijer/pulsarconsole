@@ -44,6 +44,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Failed to initialize database", error=str(e))
         raise
 
+    # Seed default permissions and roles
+    try:
+        from app.core.database import async_session_factory
+        from app.services.seed import SeedService
+
+        async with async_session_factory() as session:
+            seed_service = SeedService(session)
+            await seed_service.seed_all_environments()
+            await session.commit()
+        logger.info("Default roles and permissions seeded")
+    except Exception as e:
+        logger.warning("Failed to seed default data", error=str(e))
+
     # Initialize Redis
     try:
         await init_redis()

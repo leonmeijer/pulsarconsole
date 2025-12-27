@@ -20,6 +20,7 @@ Pulsar Console is a sleek, real-time web interface for managing and monitoring A
 - **Multi-tenant Support** — Navigate tenants, namespaces, and topics hierarchically
 - **Global Search** — Instantly find topics, subscriptions, consumers, namespaces, and brokers
 - **Notifications** — Automatic alerts for consumer disconnects, broker health issues, and storage warnings
+- **OIDC Authentication** — Secure login with PKCE support (Zitadel, Keycloak, Auth0, etc.)
 - **Favorites** — Quick access to frequently used topics and subscriptions
 - **Audit Logging** — Track all management operations
 
@@ -88,6 +89,80 @@ docker compose --profile full up -d
 | `REDIS_URL` | Redis connection string | — |
 
 See `backend/.env.example` for all available options.
+
+## Authentication
+
+Pulsar Console supports two independent authentication flows:
+
+### 1. Console Login (User Authentication)
+
+Users authenticate to the Pulsar Console web UI via OIDC with **PKCE** (Proof Key for Code Exchange).
+
+```
+User (Browser) ──► Pulsar Console ──► OIDC Provider (Zitadel, Keycloak, etc.)
+                        │
+                        └── PKCE: No client secret required
+```
+
+**Configuration:**
+
+```bash
+# backend/.env
+OIDC_ENABLED=true
+OIDC_ISSUER_URL=https://auth.example.com
+OIDC_CLIENT_ID=pulsar-console
+OIDC_USE_PKCE=true                    # Recommended (default)
+# OIDC_CLIENT_SECRET=...              # Optional with PKCE
+```
+
+**OIDC Provider Setup (e.g., Zitadel):**
+
+| Setting | Value |
+|---------|-------|
+| Application Type | Web |
+| Authentication | PKCE |
+| Redirect URI | `http://localhost:8000/api/v1/auth/callback` |
+
+### 2. Pulsar API Authentication
+
+The Console backend connects to Pulsar Admin API using token or client credentials (configured per environment).
+
+```
+Pulsar Console (Backend) ──► Pulsar Broker (Admin API)
+                                    │
+                                    └── Token or Client Credentials
+```
+
+**Note:** Pulsar does not support PKCE — it uses Client Credentials flow for OAuth. This is expected since Pulsar clients are machine-to-machine services, not interactive user flows.
+
+**Configuration (per Environment in UI):**
+
+| Auth Mode | Description |
+|-----------|-------------|
+| `none` | No authentication |
+| `token` | Static JWT token |
+| `oidc` | OAuth Client Credentials |
+
+### Architecture Overview
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    User Authentication                         │
+│                                                                │
+│   Browser ───PKCE───► Console Backend ───► OIDC Provider      │
+│                              │                                 │
+│                              ▼                                 │
+│                       JWT Session                              │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│                    Pulsar API Access                           │
+│                                                                │
+│   Console Backend ───Token/OAuth───► Pulsar Admin API         │
+│                                                                │
+│   (Client Credentials - no PKCE)                              │
+└────────────────────────────────────────────────────────────────┘
+```
 
 ## Tech Stack
 

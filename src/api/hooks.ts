@@ -36,6 +36,18 @@ import type {
   AuditEventListResponse,
   NotificationListResponse,
   NotificationCountResponse,
+  // Auth & RBAC types
+  User,
+  Role,
+  Permission,
+  UserWithRoles,
+  ApiToken,
+  TokenCreatedResponse,
+  TokenStats,
+  PulsarTokenCapability,
+  PulsarTokenResponse,
+  SessionInfo,
+  UserPermission,
 } from './types';
 
 // Query Keys
@@ -61,6 +73,18 @@ export const queryKeys = {
   auditEvents: (filters?: Record<string, unknown>) => ['audit', filters] as const,
   notifications: (filters?: Record<string, unknown>) => ['notifications', filters] as const,
   notificationCount: () => ['notifications', 'count'] as const,
+  // Auth & RBAC keys
+  currentUser: ['auth', 'me'] as const,
+  sessions: ['auth', 'sessions'] as const,
+  userPermissions: ['auth', 'permissions'] as const,
+  roles: ['rbac', 'roles'] as const,
+  role: (id: string) => ['rbac', 'roles', id] as const,
+  permissions: ['rbac', 'permissions'] as const,
+  users: ['rbac', 'users'] as const,
+  userRoles: (userId: string) => ['rbac', 'users', userId, 'roles'] as const,
+  apiTokens: ['tokens', 'api'] as const,
+  tokenStats: ['tokens', 'stats'] as const,
+  pulsarTokenCapability: ['tokens', 'pulsar', 'capability'] as const,
 };
 
 // Environment Hooks
@@ -768,6 +792,326 @@ export function useDismissAllNotifications() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+// =============================================================================
+// Auth Hooks
+// =============================================================================
+
+export function useCurrentUser() {
+  return useQuery<User>({
+    queryKey: queryKeys.currentUser,
+    queryFn: async () => {
+      const { data } = await api.get<User>('/api/v1/auth/me');
+      return data;
+    },
+    retry: false,
+  });
+}
+
+export function useSessions() {
+  return useQuery<SessionInfo[]>({
+    queryKey: queryKeys.sessions,
+    queryFn: async () => {
+      const { data } = await api.get<{ sessions: SessionInfo[] }>('/api/v1/auth/sessions');
+      return data.sessions;
+    },
+  });
+}
+
+export function useRevokeSession() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (sessionId) => {
+      const { data } = await api.delete<SuccessResponse>(`/api/v1/auth/sessions/${sessionId}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
+    },
+  });
+}
+
+export function useRevokeAllSessions() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.delete<SuccessResponse>('/api/v1/auth/sessions');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
+    },
+  });
+}
+
+export function useUserPermissions() {
+  return useQuery<UserPermission[]>({
+    queryKey: queryKeys.userPermissions,
+    queryFn: async () => {
+      const { data } = await api.get<UserPermission[]>('/api/v1/auth/permissions');
+      return data;
+    },
+  });
+}
+
+// =============================================================================
+// RBAC Hooks
+// =============================================================================
+
+export function useRoles() {
+  return useQuery<Role[]>({
+    queryKey: queryKeys.roles,
+    queryFn: async () => {
+      const { data } = await api.get<{ roles: Role[] }>('/api/v1/rbac/roles');
+      return data.roles;
+    },
+  });
+}
+
+export function useRole(roleId: string) {
+  return useQuery<Role>({
+    queryKey: queryKeys.role(roleId),
+    queryFn: async () => {
+      const { data } = await api.get<Role>(`/api/v1/rbac/roles/${roleId}`);
+      return data;
+    },
+    enabled: !!roleId,
+  });
+}
+
+export function useCreateRole() {
+  const queryClient = useQueryClient();
+  return useMutation<Role, Error, { name: string; description?: string }>({
+    mutationFn: async (roleData) => {
+      const { data } = await api.post<Role>('/api/v1/rbac/roles', roleData);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+    },
+  });
+}
+
+export function useUpdateRole() {
+  const queryClient = useQueryClient();
+  return useMutation<Role, Error, { roleId: string; name?: string; description?: string }>({
+    mutationFn: async ({ roleId, ...roleData }) => {
+      const { data } = await api.put<Role>(`/api/v1/rbac/roles/${roleId}`, roleData);
+      return data;
+    },
+    onSuccess: (_, { roleId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+      queryClient.invalidateQueries({ queryKey: queryKeys.role(roleId) });
+    },
+  });
+}
+
+export function useDeleteRole() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (roleId) => {
+      const { data } = await api.delete<SuccessResponse>(`/api/v1/rbac/roles/${roleId}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+    },
+  });
+}
+
+export function usePermissions() {
+  return useQuery<Permission[]>({
+    queryKey: queryKeys.permissions,
+    queryFn: async () => {
+      const { data } = await api.get<{ permissions: Record<string, Permission[]> }>('/api/v1/rbac/permissions');
+      // Flatten grouped permissions into a single array
+      return Object.values(data.permissions).flat();
+    },
+  });
+}
+
+export function useAddRolePermission() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, { roleId: string; permissionId: string; resourcePattern?: string }>({
+    mutationFn: async ({ roleId, permissionId, resourcePattern }) => {
+      const { data } = await api.post<SuccessResponse>(
+        `/api/v1/rbac/roles/${roleId}/permissions`,
+        { permission_id: permissionId, resource_pattern: resourcePattern }
+      );
+      return data;
+    },
+    onSuccess: (_, { roleId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.role(roleId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+    },
+  });
+}
+
+export function useRemoveRolePermission() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, { roleId: string; rolePermissionId: string }>({
+    mutationFn: async ({ roleId, rolePermissionId }) => {
+      const { data } = await api.delete<SuccessResponse>(
+        `/api/v1/rbac/roles/${roleId}/permissions/${rolePermissionId}`
+      );
+      return data;
+    },
+    onSuccess: (_, { roleId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.role(roleId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles });
+    },
+  });
+}
+
+export function useUsers() {
+  return useQuery<UserWithRoles[]>({
+    queryKey: queryKeys.users,
+    queryFn: async () => {
+      const { data } = await api.get<{ users: UserWithRoles[] }>('/api/v1/rbac/users');
+      return data.users;
+    },
+  });
+}
+
+export function useAssignUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, { userId: string; roleId: string }>({
+    mutationFn: async ({ userId, roleId }) => {
+      const { data } = await api.post<SuccessResponse>(
+        `/api/v1/rbac/users/${userId}/roles/${roleId}`
+      );
+      return data;
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userRoles(userId) });
+    },
+  });
+}
+
+export function useRevokeUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, { userId: string; roleId: string }>({
+    mutationFn: async ({ userId, roleId }) => {
+      const { data } = await api.delete<SuccessResponse>(
+        `/api/v1/rbac/users/${userId}/roles/${roleId}`
+      );
+      return data;
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userRoles(userId) });
+    },
+  });
+}
+
+export function useCheckPermission() {
+  return useMutation<{ allowed: boolean; reason?: string }, Error, { action: string; resourceLevel: string; resourcePath?: string }>({
+    mutationFn: async ({ action, resourceLevel, resourcePath }) => {
+      const { data } = await api.post<{ allowed: boolean; reason?: string }>(
+        '/api/v1/rbac/check',
+        { action, resource_level: resourceLevel, resource_path: resourcePath }
+      );
+      return data;
+    },
+  });
+}
+
+// =============================================================================
+// API Token Hooks
+// =============================================================================
+
+export function useApiTokens() {
+  return useQuery<ApiToken[]>({
+    queryKey: queryKeys.apiTokens,
+    queryFn: async () => {
+      const { data } = await api.get<{ tokens: ApiToken[] }>('/api/v1/tokens');
+      return data.tokens;
+    },
+  });
+}
+
+export function useTokenStats() {
+  return useQuery<TokenStats>({
+    queryKey: queryKeys.tokenStats,
+    queryFn: async () => {
+      const { data } = await api.get<TokenStats>('/api/v1/tokens/stats');
+      return data;
+    },
+  });
+}
+
+export function useCreateApiToken() {
+  const queryClient = useQueryClient();
+  return useMutation<TokenCreatedResponse, Error, { name: string; expiresInDays?: number; scopes?: string[] }>({
+    mutationFn: async ({ name, expiresInDays, scopes }) => {
+      const { data } = await api.post<TokenCreatedResponse>('/api/v1/tokens', {
+        name,
+        expires_in_days: expiresInDays,
+        scopes,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.apiTokens });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tokenStats });
+    },
+  });
+}
+
+export function useRevokeApiToken() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (tokenId) => {
+      const { data } = await api.delete<SuccessResponse>(`/api/v1/tokens/${tokenId}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.apiTokens });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tokenStats });
+    },
+  });
+}
+
+export function useRevokeAllApiTokens() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, void>({
+    mutationFn: async () => {
+      const { data } = await api.delete<SuccessResponse>('/api/v1/tokens');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.apiTokens });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tokenStats });
+    },
+  });
+}
+
+// =============================================================================
+// Pulsar Token Hooks
+// =============================================================================
+
+export function usePulsarTokenCapability() {
+  return useQuery<PulsarTokenCapability>({
+    queryKey: queryKeys.pulsarTokenCapability,
+    queryFn: async () => {
+      const { data } = await api.get<PulsarTokenCapability>('/api/v1/tokens/pulsar/capability');
+      return data;
+    },
+  });
+}
+
+export function useGeneratePulsarToken() {
+  return useMutation<PulsarTokenResponse, Error, { subject: string; expiresInDays?: number }>({
+    mutationFn: async ({ subject, expiresInDays }) => {
+      const { data } = await api.post<PulsarTokenResponse>('/api/v1/tokens/pulsar', {
+        subject,
+        expires_in_days: expiresInDays,
+      });
+      return data;
     },
   });
 }

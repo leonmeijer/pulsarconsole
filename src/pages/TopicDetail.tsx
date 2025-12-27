@@ -407,8 +407,8 @@ export default function TopicDetailPage() {
                                     <Send size={20} className="text-orange-500" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Backlog</div>
-                                    <div className="text-xl font-bold">{topicData.stats.backlog_size.toLocaleString()}</div>
+                                    <div className="text-sm text-muted-foreground">Backlog Size</div>
+                                    <div className="text-xl font-bold">{formatSize(topicData.stats.backlog_size)}</div>
                                 </div>
                             </div>
                         </motion.div>

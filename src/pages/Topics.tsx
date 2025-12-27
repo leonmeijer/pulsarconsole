@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useTopics, useCreateTopic, useDeleteTopic } from "@/api/hooks";
 import { useFavorites } from "@/context/FavoritesContext";
+import { PermissionGate } from "@/components/auth";
 
 export default function TopicsPage() {
     const { tenant, namespace } = useParams<{ tenant: string; namespace: string }>();
@@ -85,13 +86,15 @@ export default function TopicsPage() {
                     >
                         <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
                     </button>
-                    <button
-                        onClick={() => setShowCreate(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 font-semibold"
-                    >
-                        <Plus size={20} />
-                        Create Topic
-                    </button>
+                    <PermissionGate action="write" resourceLevel="topic" resourcePath={`${tenant}/${namespace}`}>
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 font-semibold"
+                        >
+                            <Plus size={20} />
+                            Create Topic
+                        </button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -180,13 +183,15 @@ export default function TopicsPage() {
                                             fill={isFavorite('topic', topic.name, tenant, namespace) ? "currentColor" : "none"}
                                         />
                                     </button>
-                                    <button
-                                        onClick={() => handleDelete(topic.name)}
-                                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={18} className="text-muted-foreground hover:text-red-400" />
-                                    </button>
+                                    <PermissionGate action="write" resourceLevel="topic" resourcePath={`${tenant}/${namespace}/${topic.name}`}>
+                                        <button
+                                            onClick={() => handleDelete(topic.name)}
+                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={18} className="text-muted-foreground hover:text-red-400" />
+                                        </button>
+                                    </PermissionGate>
                                 </div>
                             </div>
 
@@ -218,7 +223,7 @@ export default function TopicsPage() {
 
                             <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-4">
                                 <div className="text-xs text-muted-foreground">
-                                    Backlog: {topic.backlog_size.toLocaleString()}
+                                    Backlog: {formatSize(topic.backlog_size)}
                                 </div>
                                 <Link
                                     to={`/tenants/${tenant}/namespaces/${namespace}/topics/${topic.name}`}

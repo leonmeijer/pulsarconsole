@@ -5,6 +5,152 @@ export interface SuccessResponse {
   message: string;
 }
 
+// =============================================================================
+// Authentication Types
+// =============================================================================
+
+export interface User {
+  id: string;
+  email: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+}
+
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface OIDCProvider {
+  id: string;
+  name: string;
+  issuer_url: string;
+  login_url?: string;
+}
+
+export interface ProvidersResponse {
+  providers: OIDCProvider[];
+  auth_required: boolean;
+}
+
+export interface LoginResponse {
+  authorization_url: string;
+  state: string;
+}
+
+export interface SessionInfo {
+  id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  expires_at: string;
+  is_current: boolean;
+}
+
+export interface UserPermission {
+  action: string;
+  resource_level: string;
+  resource_pattern: string | null;
+  source: string;
+}
+
+export interface CheckPermissionResponse {
+  allowed: boolean;
+  reason: string | null;
+}
+
+// =============================================================================
+// RBAC Types
+// =============================================================================
+
+export interface Permission {
+  id: string;
+  action: string;
+  resource_level: string;
+  description: string | null;
+  full_name: string;
+}
+
+export interface RolePermission {
+  permission_id: string;
+  action: string;
+  resource_level: string;
+  resource_pattern: string | null;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  is_system: boolean;
+  permissions: RolePermission[];
+}
+
+export interface UserRole {
+  role_id: string;
+  role_name: string;
+  is_system: boolean;
+  assigned_at: string;
+}
+
+export interface UserWithRoles {
+  id: string;
+  email: string;
+  display_name: string | null;
+  is_active: boolean;
+  roles: UserRole[];
+}
+
+// =============================================================================
+// Token Types
+// =============================================================================
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  token_prefix: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+  is_revoked: boolean;
+  is_expired: boolean;
+  is_valid: boolean;
+  scopes: string[] | null;
+  created_at: string;
+}
+
+export interface TokenCreatedResponse {
+  id: string;
+  name: string;
+  token: string;
+  token_prefix: string;
+  expires_at: string | null;
+  scopes: string[] | null;
+  message: string;
+}
+
+export interface TokenStats {
+  total: number;
+  active: number;
+  revoked: number;
+  expired: number;
+}
+
+export interface PulsarTokenCapability {
+  can_generate: boolean;
+  environment_id: string | null;
+  environment_name: string | null;
+}
+
+export interface PulsarTokenResponse {
+  token: string;
+  subject: string;
+  expires_in_days: number | null;
+  message: string;
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;

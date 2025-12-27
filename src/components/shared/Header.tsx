@@ -1,8 +1,9 @@
-import { Globe, User } from "lucide-react";
+import { Globe } from "lucide-react";
 import { useEnvironments, useActivateEnvironment } from "@/api/hooks";
 import { toast } from "sonner";
 import NotificationDropdown from "./NotificationDropdown";
 import GlobalSearch from "./GlobalSearch";
+import { UserMenu } from "@/components/auth";
 
 export default function Header() {
     const { data: environments, isLoading } = useEnvironments();
@@ -56,9 +57,7 @@ export default function Header() {
 
                 <NotificationDropdown />
 
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center cursor-pointer hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
-                    <User size={20} className="text-white" />
-                </div>
+                <UserMenu />
             </div>
         </header>
     );

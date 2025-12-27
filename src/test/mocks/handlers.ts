@@ -113,6 +113,124 @@ export const mockAuditEvents = [
     },
 ];
 
+// Auth & RBAC mock data
+export const mockCurrentUser = {
+    id: 'user-1',
+    email: 'user@example.com',
+    display_name: 'Test User',
+    avatar_url: null,
+    is_active: true,
+    roles: [{ id: 'role-2', name: 'developer' }],
+    last_login_at: '2024-01-15T10:00:00Z',
+    created_at: '2024-01-01T00:00:00Z',
+};
+
+export const mockSessions = [
+    {
+        id: 'session-1',
+        user_id: 'user-1',
+        ip_address: '192.168.1.100',
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+        created_at: '2024-01-15T10:00:00Z',
+        expires_at: '2024-01-22T10:00:00Z',
+        is_current: true,
+    },
+    {
+        id: 'session-2',
+        user_id: 'user-1',
+        ip_address: '10.0.0.50',
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        created_at: '2024-01-14T08:00:00Z',
+        expires_at: '2024-01-21T08:00:00Z',
+        is_current: false,
+    },
+];
+
+export const mockPermissions = [
+    { id: 'perm-1', action: 'read', resource_level: 'cluster', description: 'Read cluster data' },
+    { id: 'perm-2', action: 'write', resource_level: 'tenant', description: 'Create/modify tenants' },
+    { id: 'perm-3', action: 'admin', resource_level: 'namespace', description: 'Admin namespace' },
+    { id: 'perm-4', action: 'produce', resource_level: 'topic', description: 'Produce to topic' },
+    { id: 'perm-5', action: 'consume', resource_level: 'topic', description: 'Consume from topic' },
+];
+
+export const mockRoles = [
+    {
+        id: 'role-1',
+        name: 'admin',
+        description: 'Full administrative access',
+        is_system: true,
+        environment_id: 'env-1',
+        permissions: [mockPermissions[0], mockPermissions[1], mockPermissions[2]],
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        id: 'role-2',
+        name: 'developer',
+        description: 'Developer access',
+        is_system: false,
+        environment_id: 'env-1',
+        permissions: [mockPermissions[0], mockPermissions[3], mockPermissions[4]],
+        created_at: '2024-01-02T00:00:00Z',
+    },
+    {
+        id: 'role-3',
+        name: 'viewer',
+        description: 'Read-only access',
+        is_system: true,
+        environment_id: 'env-1',
+        permissions: [mockPermissions[0]],
+        created_at: '2024-01-01T00:00:00Z',
+    },
+];
+
+export const mockUsers = [
+    {
+        ...mockCurrentUser,
+        roles: [mockRoles[1]],
+    },
+    {
+        id: 'user-2',
+        email: 'admin@example.com',
+        display_name: 'Admin User',
+        avatar_url: null,
+        is_active: true,
+        last_login_at: '2024-01-15T09:00:00Z',
+        created_at: '2024-01-01T00:00:00Z',
+        roles: [mockRoles[0]],
+    },
+];
+
+export const mockApiTokens = [
+    {
+        id: 'token-1',
+        name: 'CI/CD Token',
+        token_prefix: 'pc_abc1',
+        expires_at: '2025-01-01T00:00:00Z',
+        last_used_at: '2024-01-14T15:00:00Z',
+        is_revoked: false,
+        scopes: ['read', 'write'],
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        id: 'token-2',
+        name: 'Monitoring Token',
+        token_prefix: 'pc_def2',
+        expires_at: null,
+        last_used_at: '2024-01-15T08:00:00Z',
+        is_revoked: false,
+        scopes: ['read'],
+        created_at: '2024-01-05T00:00:00Z',
+    },
+];
+
+export const mockTokenStats = {
+    total: 2,
+    active: 2,
+    expired: 0,
+    revoked: 0,
+};
+
 // API Handlers
 export const handlers = [
     // Environment
@@ -320,6 +438,156 @@ export const handlers = [
         return HttpResponse.json({
             events: mockAuditEvents,
             total: mockAuditEvents.length,
+        });
+    }),
+
+    // Auth
+    http.get('/api/v1/auth/providers', () => {
+        return HttpResponse.json({
+            providers: [],
+            auth_required: false,
+        });
+    }),
+
+    http.get('/api/v1/auth/me', () => {
+        return HttpResponse.json(mockCurrentUser);
+    }),
+
+    http.post('/api/v1/auth/logout', () => {
+        return HttpResponse.json({ success: true });
+    }),
+
+    // Sessions
+    http.get('/api/v1/auth/sessions', () => {
+        return HttpResponse.json({ sessions: mockSessions });
+    }),
+
+    http.delete('/api/v1/auth/sessions/:id', () => {
+        return HttpResponse.json({ success: true, message: 'Session revoked' });
+    }),
+
+    // Permissions
+    http.get('/api/v1/rbac/permissions', () => {
+        // Group permissions by action like the backend does
+        const grouped: Record<string, typeof mockPermissions> = {};
+        for (const perm of mockPermissions) {
+            if (!grouped[perm.action]) {
+                grouped[perm.action] = [];
+            }
+            grouped[perm.action].push(perm);
+        }
+        return HttpResponse.json({ permissions: grouped });
+    }),
+
+    http.get('/api/v1/rbac/user/permissions', () => {
+        return HttpResponse.json({
+            permissions: [mockPermissions[0], mockPermissions[3], mockPermissions[4]],
+        });
+    }),
+
+    http.post('/api/v1/rbac/check', async ({ request }) => {
+        const body = await request.json() as { action: string; resource_level: string; resource_path?: string };
+        // Simulate permission check - allow 'read' for everything
+        const allowed = body.action === 'read' ||
+                       (body.action === 'produce' && body.resource_level === 'topic') ||
+                       (body.action === 'consume' && body.resource_level === 'topic');
+        return HttpResponse.json({ allowed });
+    }),
+
+    // Roles
+    http.get('/api/v1/rbac/roles', () => {
+        return HttpResponse.json({ roles: mockRoles });
+    }),
+
+    http.post('/api/v1/rbac/roles', async ({ request }) => {
+        const body = await request.json() as { name: string; description?: string };
+        return HttpResponse.json({
+            id: 'new-role',
+            name: body.name,
+            description: body.description || '',
+            is_system: false,
+            environment_id: 'env-1',
+            permissions: [],
+            created_at: new Date().toISOString(),
+        });
+    }),
+
+    http.put('/api/v1/rbac/roles/:id', async ({ request, params }) => {
+        const body = await request.json() as { name?: string; description?: string };
+        const role = mockRoles.find((r) => r.id === params.id);
+        return HttpResponse.json({
+            ...role,
+            ...body,
+        });
+    }),
+
+    http.delete('/api/v1/rbac/roles/:id', () => {
+        return HttpResponse.json({ success: true, message: 'Role deleted' });
+    }),
+
+    http.post('/api/v1/rbac/roles/:roleId/permissions/:permId', () => {
+        return HttpResponse.json({ success: true, message: 'Permission added' });
+    }),
+
+    http.delete('/api/v1/rbac/roles/:roleId/permissions/:permId', () => {
+        return HttpResponse.json({ success: true, message: 'Permission removed' });
+    }),
+
+    // Users (RBAC)
+    http.get('/api/v1/rbac/users', () => {
+        return HttpResponse.json({ users: mockUsers });
+    }),
+
+    http.post('/api/v1/rbac/users/:userId/roles/:roleId', () => {
+        return HttpResponse.json({ success: true, message: 'Role assigned' });
+    }),
+
+    http.delete('/api/v1/rbac/users/:userId/roles/:roleId', () => {
+        return HttpResponse.json({ success: true, message: 'Role revoked' });
+    }),
+
+    // API Tokens
+    http.get('/api/v1/tokens', () => {
+        return HttpResponse.json({ tokens: mockApiTokens });
+    }),
+
+    http.get('/api/v1/tokens/stats', () => {
+        return HttpResponse.json(mockTokenStats);
+    }),
+
+    http.post('/api/v1/tokens', async ({ request }) => {
+        const body = await request.json() as { name: string; scopes?: string[]; expires_at?: string };
+        return HttpResponse.json({
+            id: 'new-token',
+            name: body.name,
+            token: 'pc_newtok_abcdefghijklmnop',
+            token_prefix: 'pc_newt',
+            expires_at: body.expires_at || null,
+            scopes: body.scopes || ['read'],
+            created_at: new Date().toISOString(),
+        });
+    }),
+
+    http.delete('/api/v1/tokens/:id', () => {
+        return HttpResponse.json({ success: true, message: 'Token revoked' });
+    }),
+
+    // Pulsar Token generation
+    http.get('/api/v1/tokens/pulsar/capability', () => {
+        return HttpResponse.json({
+            can_generate: true,
+            reason: null,
+        });
+    }),
+
+    http.post('/api/v1/tokens/pulsar', async ({ request }) => {
+        const body = await request.json() as { subject: string; expires_in_days?: number };
+        return HttpResponse.json({
+            token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
+            subject: body.subject,
+            expires_at: body.expires_in_days
+                ? new Date(Date.now() + body.expires_in_days * 24 * 60 * 60 * 1000).toISOString()
+                : null,
         });
     }),
 ];

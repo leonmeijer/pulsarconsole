@@ -259,37 +259,49 @@ export default function DashboardPage() {
             </div>
 
             {/* Health Status */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn("glass p-4 rounded-2xl flex items-center gap-4", healthBgColor)}
-            >
-                <div className={cn("p-3 rounded-xl", healthBgColor)}>
-                    <HealthIcon className={cn("w-6 h-6", healthColor)} />
-                </div>
-                <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <span className={cn("font-semibold capitalize", healthColor)}>
-                            {health?.overall || "Unknown"} Status
-                        </span>
-                        <span className="text-muted-foreground text-sm">•</span>
-                        <span className="text-sm text-muted-foreground">
-                            {health?.broker_count || 0} brokers active
-                        </span>
+            {healthLoading ? (
+                <div className="glass p-4 rounded-2xl flex items-center gap-4 bg-white/5">
+                    <div className="p-3 rounded-xl bg-white/5">
+                        <div className="w-6 h-6 rounded-full bg-white/10 animate-pulse" />
                     </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <span className={health?.pulsar_connection ? "text-green-500" : "text-red-500"}>
-                            Pulsar: {health?.pulsar_connection ? "Connected" : "Disconnected"}
-                        </span>
-                        <span className={health?.database_connection ? "text-green-500" : "text-red-500"}>
-                            Database: {health?.database_connection ? "OK" : "Error"}
-                        </span>
-                        <span className={health?.redis_connection ? "text-green-500" : "text-red-500"}>
-                            Cache: {health?.redis_connection ? "OK" : "Error"}
-                        </span>
+                    <div className="flex-1 space-y-2">
+                        <div className="h-5 w-40 bg-white/10 rounded animate-pulse" />
+                        <div className="h-4 w-64 bg-white/10 rounded animate-pulse" />
                     </div>
                 </div>
-            </motion.div>
+            ) : (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={cn("glass p-4 rounded-2xl flex items-center gap-4", healthBgColor)}
+                >
+                    <div className={cn("p-3 rounded-xl", healthBgColor)}>
+                        <HealthIcon className={cn("w-6 h-6", healthColor)} />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                            <span className={cn("font-semibold capitalize", healthColor)}>
+                                {health?.overall || "Unknown"} Status
+                            </span>
+                            <span className="text-muted-foreground text-sm">•</span>
+                            <span className="text-sm text-muted-foreground">
+                                {health?.broker_count || 0} brokers active
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <span className={health?.pulsar_connection ? "text-green-500" : "text-red-500"}>
+                                Pulsar: {health?.pulsar_connection ? "Connected" : "Disconnected"}
+                            </span>
+                            <span className={health?.database_connection ? "text-green-500" : "text-red-500"}>
+                                Database: {health?.database_connection ? "OK" : "Error"}
+                            </span>
+                            <span className={health?.redis_connection ? "text-green-500" : "text-red-500"}>
+                                Cache: {health?.redis_connection ? "OK" : "Error"}
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Tip about favorites */}
             {showTip && (

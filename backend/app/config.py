@@ -82,6 +82,32 @@ class Settings(BaseSettings):
     encryption_key: str = Field(default="change-me-in-production")
 
     # -------------------------------------------------------------------------
+    # Authentication (JWT)
+    # -------------------------------------------------------------------------
+    jwt_secret_key: str = Field(default="change-me-in-production-jwt")
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_access_token_expire_minutes: int = Field(default=15)
+    jwt_refresh_token_expire_days: int = Field(default=7)
+
+    # -------------------------------------------------------------------------
+    # OIDC (Optional - configured per environment)
+    # -------------------------------------------------------------------------
+    # Global OIDC settings (can be overridden per environment)
+    oidc_enabled: bool = Field(default=False)
+    oidc_issuer_url: str | None = Field(default=None)
+    oidc_client_id: str | None = Field(default=None)
+    oidc_client_secret: str | None = Field(default=None)  # Optional when using PKCE
+    oidc_use_pkce: bool = Field(default=True)  # Use PKCE by default (recommended)
+
+    # -------------------------------------------------------------------------
+    # Session Settings
+    # -------------------------------------------------------------------------
+    session_cookie_name: str = Field(default="pulsar_console_session")
+    session_cookie_secure: bool = Field(default=True)
+    session_cookie_httponly: bool = Field(default=True)
+    session_cookie_samesite: Literal["lax", "strict", "none"] = Field(default="lax")
+
+    # -------------------------------------------------------------------------
     # Message Browsing Limits
     # -------------------------------------------------------------------------
     max_messages_per_request: int = Field(default=100)

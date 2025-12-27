@@ -7,16 +7,21 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     ScrollText,
     Star,
     FolderOpen,
     MessageSquare,
     Users,
     Bell,
+    Key,
+    Shield,
+    Monitor,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFavorites, type FavoriteType } from "@/context/FavoritesContext";
+import { useAuth } from "@/context/AuthContext";
 
 const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -34,11 +39,28 @@ const favoriteIcons: Record<FavoriteType, typeof Building2> = {
     subscription: Users,
 };
 
+const settingsItems = [
+    { icon: Key, label: "API Tokens", path: "/settings/tokens" },
+    { icon: Monitor, label: "Sessions", path: "/settings/sessions" },
+];
+
+const adminSettingsItems = [
+    { icon: Shield, label: "Roles", path: "/settings/roles" },
+    { icon: Users, label: "Users", path: "/settings/users" },
+];
+
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [favoritesExpanded, setFavoritesExpanded] = useState(true);
+    const [settingsExpanded, setSettingsExpanded] = useState(false);
     const location = useLocation();
     const { favorites, removeFavorite } = useFavorites();
+    const { user, authRequired, isAuthenticated } = useAuth();
+
+    const showSettings = authRequired && isAuthenticated;
+    // Check if user has superuser role
+    const hasSuperuserRole = user?.roles?.some((role) => role.name === 'superuser') ?? false;
+    const showAdminSettings = hasSuperuserRole;
 
     return (
         <motion.aside
@@ -157,6 +179,96 @@ export default function Sidebar() {
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+
+                {/* Settings Section */}
+                {showSettings && (
+                    <div className="mt-6 pt-4 border-t border-white/10">
+                        <button
+                            onClick={() => setSettingsExpanded(!settingsExpanded)}
+                            className={cn(
+                                "flex items-center gap-4 px-4 py-2 w-full rounded-xl transition-all duration-200 group relative",
+                                location.pathname.startsWith("/settings")
+                                    ? "bg-primary/10 text-primary"
+                                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Settings size={20} className={location.pathname.startsWith("/settings") ? "text-primary" : ""} />
+                            {!isCollapsed && (
+                                <>
+                                    <span className="font-medium text-sm flex-1 text-left">Settings</span>
+                                    <ChevronDown
+                                        size={16}
+                                        className={cn(
+                                            "transition-transform",
+                                            settingsExpanded ? "rotate-180" : ""
+                                        )}
+                                    />
+                                </>
+                            )}
+                            {isCollapsed && (
+                                <div className="absolute left-full ml-4 px-3 py-2 bg-popover text-popover-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl border border-white/10">
+                                    Settings
+                                </div>
+                            )}
+                        </button>
+
+                        <AnimatePresence>
+                            {settingsExpanded && !isCollapsed && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="space-y-1 mt-2 pl-2">
+                                        {settingsItems.map((item) => {
+                                            const isActive = location.pathname === item.path;
+                                            return (
+                                                <Link
+                                                    key={item.path}
+                                                    to={item.path}
+                                                    className={cn(
+                                                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                                                        isActive
+                                                            ? "bg-primary/20 text-primary"
+                                                            : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                                                    )}
+                                                >
+                                                    <item.icon size={16} className={cn(isActive ? "text-primary" : "text-muted-foreground")} />
+                                                    <span className="text-sm">{item.label}</span>
+                                                </Link>
+                                            );
+                                        })}
+                                        {showAdminSettings && (
+                                            <>
+                                                <div className="h-px bg-white/10 my-2" />
+                                                {adminSettingsItems.map((item) => {
+                                                    const isActive = location.pathname === item.path;
+                                                    return (
+                                                        <Link
+                                                            key={item.path}
+                                                            to={item.path}
+                                                            className={cn(
+                                                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                                                                isActive
+                                                                    ? "bg-primary/20 text-primary"
+                                                                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <item.icon size={16} className={cn(isActive ? "text-primary" : "text-muted-foreground")} />
+                                                            <span className="text-sm">{item.label}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}

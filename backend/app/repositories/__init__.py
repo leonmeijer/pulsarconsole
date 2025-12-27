@@ -10,6 +10,15 @@ from app.repositories.stats import (
     AggregationRepository,
 )
 
+# Auth & RBAC repositories
+from app.repositories.user import UserRepository
+from app.repositories.session import SessionRepository
+from app.repositories.role import RoleRepository
+from app.repositories.permission import PermissionRepository, RolePermissionRepository
+from app.repositories.user_role import UserRoleRepository
+from app.repositories.api_token import ApiTokenRepository
+from app.repositories.oidc_provider import OIDCProviderRepository
+
 __all__ = [
     "BaseRepository",
     "EnvironmentRepository",
@@ -18,4 +27,13 @@ __all__ = [
     "SubscriptionStatsRepository",
     "BrokerStatsRepository",
     "AggregationRepository",
+    # Auth & RBAC
+    "UserRepository",
+    "SessionRepository",
+    "RoleRepository",
+    "PermissionRepository",
+    "RolePermissionRepository",
+    "UserRoleRepository",
+    "ApiTokenRepository",
+    "OIDCProviderRepository",
 ]
