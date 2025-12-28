@@ -29,7 +29,30 @@ Pulsar Console is a sleek, real-time web interface for managing and monitoring A
 
 ## Screenshots
 
-*Coming soon*
+### Dashboard
+Real-time cluster overview with health status, message throughput, and resource usage.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Topic Detail
+Detailed topic view with statistics, subscriptions, and message browser.
+
+![Topic Detail](docs/screenshots/topic-detail.png)
+
+### Audit Logs
+Track all management operations with filtering and export capabilities.
+
+![Audit Logs](docs/screenshots/audit-logs.png)
+
+### Global Search
+Instantly find topics, subscriptions, consumers, and brokers.
+
+![Global Search](docs/screenshots/global-search.png)
+
+### Notifications
+Automatic alerts for consumer disconnects, broker issues, and storage warnings.
+
+![Notifications](docs/screenshots/notifications1.png)
 
 ## Quick Start
 
