@@ -231,6 +231,12 @@ async def get_current_user(
 
     Raises HTTPException 401 if not authenticated.
     """
+    from app.config import settings
+    
+    # Development bypass: return a dev user if auth is disabled
+    if settings.auth_disabled:
+        return await _get_or_create_dev_user(db)
+    
     token = None
 
     # Try Bearer token first
@@ -239,7 +245,6 @@ async def get_current_user(
 
     # Try session cookie
     if not token:
-        from app.config import settings
         token = request.cookies.get(settings.session_cookie_name)
 
     # Try API token header
@@ -268,6 +273,57 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    return user
+
+
+async def _get_or_create_dev_user(db: AsyncSession) -> User:
+    """Get or create a SYSTEM user when auth is disabled."""
+    from sqlalchemy import select
+    from app.models.role import Role
+    from app.models.user_role import UserRole
+    
+    SYSTEM_USER_EMAIL = "system@localhost"
+    SYSTEM_USER_SUBJECT = "system"
+    SYSTEM_USER_ISSUER = "local"
+    
+    # Check if system user exists
+    result = await db.execute(
+        select(User).where(User.email == SYSTEM_USER_EMAIL)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        user = User(
+            email=SYSTEM_USER_EMAIL,
+            subject=SYSTEM_USER_SUBJECT,
+            issuer=SYSTEM_USER_ISSUER,
+            display_name="SYSTEM",
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+    
+    # Check if user has any roles
+    role_check = await db.execute(
+        select(UserRole).where(UserRole.user_id == user.id).limit(1)
+    )
+    has_roles = role_check.scalar_one_or_none() is not None
+    
+    if not has_roles:
+        # Assign superuser role if exists
+        role_result = await db.execute(
+            select(Role).where(Role.name == "superuser").limit(1)
+        )
+        superuser_role = role_result.scalar_one_or_none()
+        
+        if superuser_role:
+            user_role = UserRole(
+                user_id=user.id,
+                role_id=superuser_role.id,
+            )
+            db.add(user_role)
+            await db.flush()
+    
     return user
 
 
@@ -382,6 +438,12 @@ async def get_current_approved_user(
 
     Raises HTTPException 403 if user has no roles.
     """
+    from app.config import settings
+    
+    # Skip role check when auth is disabled (SYSTEM user)
+    if settings.auth_disabled:
+        return current_user
+    
     if not await has_any_role(current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

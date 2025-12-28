@@ -111,6 +111,7 @@ services:
       - APP_NAME=pulsar-console
       - APP_ENV=development
       - DEBUG=true
+      - AUTH_DISABLED=true
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - PULSAR_ADMIN_URL=http://pulsar:8080
@@ -200,7 +201,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: pulsar-console-frontend
     ports:
-      - "3000:8080"
+      - "3000:80"
     depends_on:
       - api
     restart: unless-stopped
