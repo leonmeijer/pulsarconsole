@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, PulsarConnectionError, ValidationError
 from app.core.logging import get_logger
+from app.db.seed_data import seed_rbac_data
 from app.models.environment import AuthMode, Environment, OIDCMode, RBACSyncMode
 from app.repositories.environment import EnvironmentRepository
 from app.services.pulsar_admin import PulsarAdminService
@@ -194,6 +195,17 @@ class EnvironmentService:
         if is_first:
             await self.repository.set_active(name)
             await self.session.refresh(env)
+
+        # Seed default RBAC roles for this environment
+        try:
+            await seed_rbac_data(self.session, env.id)
+            logger.info("Seeded default RBAC roles for environment", environment=name)
+        except Exception as e:
+            logger.warning(
+                "Failed to seed RBAC roles for environment",
+                environment=name,
+                error=str(e)
+            )
 
         logger.info("Environment created", name=name, admin_url=admin_url, is_active=is_first)
         return env

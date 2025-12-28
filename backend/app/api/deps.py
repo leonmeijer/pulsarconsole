@@ -37,19 +37,25 @@ async def has_superuser_access(user: User, db: AsyncSession) -> bool:
 
     A user has superuser access if they have the "superuser" role in any environment.
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, exists
     from app.models.role import Role
     from app.models.user_role import UserRole
 
+    # Use exists() to check if at least one superuser role assignment exists
+    # This avoids issues with multiple role assignments
     result = await db.execute(
-        select(UserRole)
-        .join(Role, UserRole.role_id == Role.id)
-        .where(
-            UserRole.user_id == user.id,
-            Role.name == "superuser",
+        select(
+            exists(
+                select(UserRole.id)
+                .join(Role, UserRole.role_id == Role.id)
+                .where(
+                    UserRole.user_id == user.id,
+                    Role.name == "superuser",
+                )
+            )
         )
     )
-    return result.scalar_one_or_none() is not None
+    return result.scalar() or False
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

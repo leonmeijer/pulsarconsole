@@ -13,6 +13,37 @@ import {
 import { cn } from '@/lib/utils';
 import type { PulsarAuthStatus, PulsarAuthValidation } from '@/api/hooks';
 
+/**
+ * Format a Java class name to a more readable short name.
+ * e.g., "org.apache.pulsar.broker.authorization.PulsarAuthorizationProvider" -> "Pulsar Authorization"
+ */
+function formatProviderName(fullClassName: string): string {
+  // Extract the simple class name (last part after the last dot)
+  const simpleName = fullClassName.split('.').pop() || fullClassName;
+  
+  // Remove common suffixes and format
+  return simpleName
+    .replace(/Provider$/, '')
+    .replace(/Authorization$/, ' Authorization')
+    .replace(/Authentication$/, ' Authentication')
+    // Add spaces before capital letters (camelCase to Title Case)
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim();
+}
+
+/**
+ * Filter out warnings that are actually positive status messages.
+ */
+function filterRealWarnings(warnings: string[], authEnabled: boolean): string[] {
+  return warnings.filter(warning => {
+    // "Authentication is already enabled" is not a warning when auth is enabled - it's good!
+    if (authEnabled && warning.toLowerCase().includes('authentication is already enabled')) {
+      return false;
+    }
+    return true;
+  });
+}
+
 interface AuthStatusCardProps {
   status: PulsarAuthStatus | undefined;
   validation: PulsarAuthValidation | undefined;
@@ -121,7 +152,9 @@ export default function AuthStatusCard({
         {status?.authorization_provider && (
           <div className="p-4 bg-white/5 rounded-lg">
             <p className="text-sm text-muted-foreground">Auth Provider</p>
-            <p className="font-medium capitalize">{status.authorization_provider}</p>
+            <p className="font-medium text-sm break-all" title={status.authorization_provider}>
+              {formatProviderName(status.authorization_provider)}
+            </p>
           </div>
         )}
 
@@ -196,22 +229,25 @@ export default function AuthStatusCard({
               </span>
             </div>
 
-            {/* Warnings */}
-            {validation.warnings && validation.warnings.length > 0 && (
-              <div className="mt-4 p-3 bg-yellow-500/10 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-500 mb-2">
-                  <AlertTriangle size={16} />
-                  <span className="font-medium text-sm">Warnings</span>
+            {/* Warnings - filtered to remove positive status messages */}
+            {(() => {
+              const realWarnings = filterRealWarnings(validation.warnings || [], authEnabled);
+              return realWarnings.length > 0 ? (
+                <div className="mt-4 p-3 bg-yellow-500/10 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-500 mb-2">
+                    <AlertTriangle size={16} />
+                    <span className="font-medium text-sm">Warnings</span>
+                  </div>
+                  <ul className="space-y-1">
+                    {realWarnings.map((warning, i) => (
+                      <li key={i} className="text-sm text-yellow-400">
+                        {warning}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-1">
-                  {validation.warnings.map((warning, i) => (
-                    <li key={i} className="text-sm text-yellow-400">
-                      {warning}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              ) : null;
+            })()}
 
             {/* Errors */}
             {validation.errors && validation.errors.length > 0 && (
