@@ -337,7 +337,7 @@ export default function EnvironmentPage() {
                                         type="text"
                                         value={formData.admin_url}
                                         onChange={(e) => setFormData({ ...formData, admin_url: e.target.value })}
-                                        placeholder="http://localhost:8080"
+                                        placeholder="http://pulsar:8080"
                                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
                                     />
                                 </div>
