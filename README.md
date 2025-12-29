@@ -139,6 +139,11 @@ Instantly find topics, subscriptions, consumers, and brokers.
 docker compose --profile full up -d
 ```
 
+```bash
+# Start only Pulsar
+docker compose --profile full up -d pulsar
+```
+
 ---
 
 ## Docker Hub Deployment
