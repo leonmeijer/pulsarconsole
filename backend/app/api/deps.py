@@ -299,8 +299,13 @@ async def _get_or_create_dev_user(db: AsyncSession) -> User:
             issuer=SYSTEM_USER_ISSUER,
             display_name="SYSTEM",
             is_active=True,
+            is_global_admin=True,
         )
         db.add(user)
+        await db.flush()
+    elif not user.is_global_admin:
+        # Ensure existing dev user has global admin
+        user.is_global_admin = True
         await db.flush()
     
     # Check if user has any roles
