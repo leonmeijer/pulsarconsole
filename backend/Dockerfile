@@ -1,7 +1,9 @@
 # =============================================================================
 # Pulsar Console API - Docker Image
 # =============================================================================
-FROM python:3.12-slim AS builder
+# Using docker.io with authenticated pulls to avoid rate limits
+ARG PYTHON_IMAGE=docker.io/library/python:3.12-slim
+FROM ${PYTHON_IMAGE} AS builder
 
 WORKDIR /app
 
@@ -19,7 +21,7 @@ RUN pip install --no-cache-dir build && \
 # =============================================================================
 # Production image
 # =============================================================================
-FROM python:3.12-slim
+FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
 
