@@ -828,16 +828,28 @@ class PulsarAdminService:
             else:
                 stats['memory'] = {'usage': 0}
 
-            # Estimate CPU usage based on active threads (as a simple proxy)
-            # We'll use thread count relative to a baseline of 100 as a rough indicator
-            thread_count = stats.get('jvmThreads', 0)
-            cpu_estimate = min(100, (thread_count / 100) * 50) if thread_count > 0 else 0
-            stats['cpu'] = {'usage': cpu_estimate}
+            # Try to get actual CPU from load report
+            try:
+                load_report = await self.get_broker_load_report()
+                cpu_data = load_report.get('cpu', {})
+                stats['cpu'] = {'usage': cpu_data.get('usage', 0)}
 
-            # Direct memory as percentage (assume 2GB limit if not known)
-            direct_mem = stats.get('directMemoryUsed', 0)
-            direct_limit = 2 * 1024 * 1024 * 1024  # 2GB default
-            stats['directMemory'] = {'usage': (direct_mem / direct_limit) * 100 if direct_limit > 0 else 0}
+                # Also get direct memory from load report if available
+                direct_memory_data = load_report.get('directMemory', {})
+                if direct_memory_data:
+                    stats['directMemory'] = {'usage': direct_memory_data.get('usage', 0)}
+                else:
+                    # Fallback: Direct memory as percentage (assume 2GB limit if not known)
+                    direct_mem = stats.get('directMemoryUsed', 0)
+                    direct_limit = 2 * 1024 * 1024 * 1024  # 2GB default
+                    stats['directMemory'] = {'usage': (direct_mem / direct_limit) * 100 if direct_limit > 0 else 0}
+            except Exception:
+                # Fallback: mark CPU as unavailable
+                stats['cpu'] = {'usage': 0, 'unavailable': True}
+                # Fallback: Direct memory as percentage (assume 2GB limit if not known)
+                direct_mem = stats.get('directMemoryUsed', 0)
+                direct_limit = 2 * 1024 * 1024 * 1024  # 2GB default
+                stats['directMemory'] = {'usage': (direct_mem / direct_limit) * 100 if direct_limit > 0 else 0}
 
             return stats
 
@@ -866,6 +878,18 @@ class PulsarAdminService:
         """Get the leader broker info."""
         response = await self._request("GET", "/admin/v2/brokers/leaderBroker")
         return self._handle_response(response, "leader-broker")
+
+    async def get_broker_load_report(self) -> dict[str, Any]:
+        """Get broker load report with actual CPU/memory usage.
+
+        This endpoint returns real resource usage metrics from the broker's
+        load manager, including actual CPU and memory percentages.
+
+        Returns:
+            Load report dict with 'cpu', 'memory', 'directMemory' usage data.
+        """
+        response = await self._request("GET", "/admin/v2/broker-stats/load-report")
+        return self._handle_response(response, "load-report")
 
     async def get_broker_configuration(self) -> dict[str, Any] | list[str]:
         """Get all broker configuration parameters.

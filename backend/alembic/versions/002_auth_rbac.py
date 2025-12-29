@@ -33,31 +33,20 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Add authentication and RBAC tables and columns."""
 
-    # Create new enum types
-    oidcmode = postgresql.ENUM(
-        "none", "console_only", "passthrough",
-        name="oidcmode", create_type=False
-    )
-    oidcmode.create(op.get_bind(), checkfirst=True)
-
-    rbacsyncmode = postgresql.ENUM(
-        "console_only", "sync_to_pulsar", "read_from_pulsar",
-        name="rbacsyncmode", create_type=False
-    )
-    rbacsyncmode.create(op.get_bind(), checkfirst=True)
-
-    permissionaction = postgresql.ENUM(
-        "produce", "consume", "functions", "sources", "sinks", "packages",
-        "admin", "read", "write",
-        name="permissionaction", create_type=False
-    )
-    permissionaction.create(op.get_bind(), checkfirst=True)
-
-    resourcelevel = postgresql.ENUM(
-        "cluster", "tenant", "namespace", "topic",
-        name="resourcelevel", create_type=False
-    )
-    resourcelevel.create(op.get_bind(), checkfirst=True)
+    # Create new enum types (idempotent)
+    conn = op.get_bind()
+    
+    for enum_name, enum_values in [
+        ("oidcmode", "('none', 'console_only', 'passthrough')"),
+        ("rbacsyncmode", "('console_only', 'sync_to_pulsar', 'read_from_pulsar')"),
+        ("permissionaction", "('produce', 'consume', 'functions', 'sources', 'sinks', 'packages', 'admin', 'read', 'write')"),
+        ("resourcelevel", "('cluster', 'tenant', 'namespace', 'topic')"),
+    ]:
+        result = conn.execute(
+            sa.text(f"SELECT 1 FROM pg_type WHERE typname = '{enum_name}'")
+        ).fetchone()
+        if not result:
+            op.execute(f"CREATE TYPE {enum_name} AS ENUM {enum_values}")
 
     # Add new columns to environments table
     op.add_column(
@@ -73,7 +62,7 @@ def upgrade() -> None:
         "environments",
         sa.Column(
             "oidc_mode",
-            sa.Enum("none", "console_only", "passthrough", name="oidcmode"),
+            postgresql.ENUM("none", "console_only", "passthrough", name="oidcmode", create_type=False),
             nullable=False,
             server_default="none"
         )
@@ -82,7 +71,7 @@ def upgrade() -> None:
         "environments",
         sa.Column(
             "rbac_sync_mode",
-            sa.Enum("console_only", "sync_to_pulsar", "read_from_pulsar", name="rbacsyncmode"),
+            postgresql.ENUM("console_only", "sync_to_pulsar", "read_from_pulsar", name="rbacsyncmode", create_type=False),
             nullable=False,
             server_default="console_only"
         )
@@ -163,16 +152,16 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             "action",
-            sa.Enum(
+            postgresql.ENUM(
                 "produce", "consume", "functions", "sources", "sinks", "packages",
                 "admin", "read", "write",
-                name="permissionaction"
+                name="permissionaction", create_type=False
             ),
             nullable=False
         ),
         sa.Column(
             "resource_level",
-            sa.Enum("cluster", "tenant", "namespace", "topic", name="resourcelevel"),
+            postgresql.ENUM("cluster", "tenant", "namespace", "topic", name="resourcelevel", create_type=False),
             nullable=False
         ),
         sa.Column("description", sa.Text(), nullable=True),

@@ -16,10 +16,26 @@ version: '3.8'
 
 services:
   # ==========================================================================
+  # Database Migrations (runs once at startup)
+  # ==========================================================================
+  migrate:
+    image: lvms/pulsarconsole-backend:${VERSION:-latest}
+    entrypoint: ["alembic", "upgrade", "head"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pulsar:${POSTGRES_PASSWORD}@postgres:5432/pulsar_console
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pulsar-console
+
+  # ==========================================================================
   # Pulsar Console API
   # ==========================================================================
   api:
-    image: ghcr.io/leonmeijer/pulsar-console-api:${VERSION:-latest}
+    image: lvms/pulsarconsole-backend:${VERSION:-latest}
+    entrypoint: []
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
     environment:
@@ -37,7 +53,14 @@ services:
       - PULSAR_ADMIN_URL=${PULSAR_ADMIN_URL:-http://pulsar:8080}
       - PULSAR_AUTH_TOKEN=${PULSAR_AUTH_TOKEN:-}
       - WORKERS=4
+      # OIDC Authentication (set to true for production)
+      - OIDC_ENABLED=${OIDC_ENABLED:-false}
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_USE_PKCE=${OIDC_USE_PKCE:-true}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -63,8 +86,9 @@ services:
   # Celery Worker
   # ==========================================================================
   worker:
-    image: ghcr.io/leonmeijer/pulsar-console-api:${VERSION:-latest}
-    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
+    image: lvms/pulsarconsole-backend:${VERSION:-latest}
+    entrypoint: []
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
     environment:
       - APP_ENV=production
       - DATABASE_URL=postgresql+asyncpg://pulsar:${POSTGRES_PASSWORD}@postgres:5432/pulsar_console
@@ -76,8 +100,10 @@ services:
       - PULSAR_ADMIN_URL=${PULSAR_ADMIN_URL:-http://pulsar:8080}
       - PULSAR_AUTH_TOKEN=${PULSAR_AUTH_TOKEN:-}
     depends_on:
-      - api
-      - redis
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -94,8 +120,9 @@ services:
   # Celery Beat
   # ==========================================================================
   beat:
-    image: ghcr.io/leonmeijer/pulsar-console-api:${VERSION:-latest}
-    command: celery -A app.worker.celery_app beat --loglevel=info
+    image: lvms/pulsarconsole-backend:${VERSION:-latest}
+    entrypoint: []
+    command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
     environment:
       - APP_ENV=production
       - DATABASE_URL=postgresql+asyncpg://pulsar:${POSTGRES_PASSWORD}@postgres:5432/pulsar_console
@@ -103,8 +130,7 @@ services:
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-}@redis:6379/2
     depends_on:
-      - api
-      - redis
+      - worker
     restart: unless-stopped
     deploy:
       resources:
@@ -118,7 +144,7 @@ services:
   # Frontend
   # ==========================================================================
   frontend:
-    image: ghcr.io/leonmeijer/pulsar-console-frontend:${VERSION:-latest}
+    image: lvms/pulsarconsole-frontend:${VERSION:-latest}
     ports:
       - "3000:8080"
     depends_on:

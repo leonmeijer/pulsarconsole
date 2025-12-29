@@ -8,11 +8,28 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import JSON, Text, event
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import Settings
 from app.core.database import Base, get_db
 from app.main import app
+
+
+# SQLite doesn't support JSONB, so we need to replace it with JSON for tests
+# This is done by listening to the before_create event
+@event.listens_for(Base.metadata, "before_create")
+def _replace_pg_types_for_sqlite(target, connection, **kw):
+    """Replace PostgreSQL-specific types with SQLite-compatible ones."""
+    if connection.dialect.name == "sqlite":
+        for table in target.tables.values():
+            for column in table.columns:
+                if isinstance(column.type, JSONB):
+                    column.type = JSON()
+                elif isinstance(column.type, ARRAY):
+                    # Store arrays as JSON in SQLite
+                    column.type = JSON()
 
 
 # Test settings

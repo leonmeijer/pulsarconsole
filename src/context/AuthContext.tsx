@@ -16,6 +16,7 @@ export interface User {
   display_name: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  is_global_admin?: boolean;
   roles?: UserRole[];
 }
 
@@ -287,10 +288,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Determine if user has access to the console
   // - If auth is not required, everyone has access
-  // - If auth is required, user needs to have at least one role (including superuser role)
+  // - If auth is required, user needs to be a global admin OR have at least one role
   const hasAccess = !authRequired || (
     isAuthenticated && (
-      user?.roles && user.roles.length > 0
+      user?.is_global_admin || (user?.roles && user.roles.length > 0)
     )
   ) || false;
 

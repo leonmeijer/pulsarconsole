@@ -103,10 +103,9 @@ class Settings(BaseSettings):
     # OIDC (Optional - configured per environment)
     # -------------------------------------------------------------------------
     # Global OIDC settings (can be overridden per environment)
+    # When OIDC is disabled, authentication is bypassed (dev mode)
+    # When OIDC is enabled, users must authenticate via the configured provider
     oidc_enabled: bool = Field(default=False)
-    
-    # Development: Disable authentication entirely (creates a dev user)
-    auth_disabled: bool = Field(default=False)
     oidc_issuer_url: str | None = Field(default=None)
     oidc_client_id: str | None = Field(default=None)
     oidc_client_secret: str | None = Field(default=None)  # Optional when using PKCE

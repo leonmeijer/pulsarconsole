@@ -52,8 +52,13 @@ class RBACService:
         """
         Check if a user has superuser access.
 
-        A user has superuser access if they have the "superuser" role in any environment.
+        A user has superuser access if:
+        - They are a global admin (is_global_admin=True), OR
+        - They have the "superuser" role in any environment.
         """
+        user = await self.user_repo.get_by_id(user_id)
+        if user and user.is_global_admin:
+            return True
         return await self.user_role_repo.has_role_by_name_any_environment(user_id, "superuser")
 
     async def enable_rbac(self, environment_id: UUID) -> Environment | None:

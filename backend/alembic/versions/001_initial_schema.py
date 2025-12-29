@@ -27,12 +27,13 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create initial database schema."""
 
-    # Create authmode enum
-    authmode = postgresql.ENUM(
-        "none", "token", "tls", "oidc",
-        name="authmode", create_type=False
-    )
-    authmode.create(op.get_bind(), checkfirst=True)
+    # Create authmode enum (idempotent - check if exists first)
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text("SELECT 1 FROM pg_type WHERE typname = 'authmode'")
+    ).fetchone()
+    if not result:
+        op.execute("CREATE TYPE authmode AS ENUM ('none', 'token', 'tls', 'oidc')")
 
     # Create environments table
     op.create_table(
@@ -42,7 +43,7 @@ def upgrade() -> None:
         sa.Column("admin_url", sa.String(512), nullable=False),
         sa.Column(
             "auth_mode",
-            sa.Enum("none", "token", "tls", "oidc", name="authmode"),
+            postgresql.ENUM("none", "token", "tls", "oidc", name="authmode", create_type=False),
             nullable=False,
             server_default="none",
         ),

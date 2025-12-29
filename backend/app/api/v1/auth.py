@@ -87,6 +87,7 @@ class UserResponse(BaseModel):
     display_name: str | None
     avatar_url: str | None
     is_active: bool
+    is_global_admin: bool = False
     roles: list[UserRoleInfo] = []
 
     class Config:
@@ -391,6 +392,7 @@ async def get_current_user(
         display_name=user.display_name,
         avatar_url=user.avatar_url,
         is_active=user.is_active,
+        is_global_admin=user.is_global_admin,
         roles=roles,
     )
 

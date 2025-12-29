@@ -75,6 +75,10 @@ class UserRepository(BaseRepository[User]):
         """Activate a user."""
         return await self.update(user_id, is_active=True)
 
+    async def set_global_admin(self, user_id: UUID, is_admin: bool = True) -> User | None:
+        """Set or remove global admin status for a user."""
+        return await self.update(user_id, is_global_admin=is_admin)
+
     async def count_all(self) -> int:
         """Count all users in the system."""
         result = await self.session.execute(
@@ -118,7 +122,7 @@ class UserRepository(BaseRepository[User]):
         user_count = await self.count_all()
         is_first_user = user_count == 0
 
-        # Create new user
+        # Create new user - first user becomes global admin
         user = await self.create(
             subject=subject,
             issuer=issuer,
@@ -126,5 +130,6 @@ class UserRepository(BaseRepository[User]):
             display_name=display_name,
             avatar_url=avatar_url,
             last_login_at=datetime.now(timezone.utc),
+            is_global_admin=is_first_user,
         )
         return user, True, is_first_user

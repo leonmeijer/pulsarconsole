@@ -64,31 +64,14 @@ services:
     environment:
       PULSAR_MEM: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
       # ========================================================================
-      # Authentication & Authorization
+      # Authentication & Authorization (disabled for local dev)
       # ========================================================================
-      PULSAR_PREFIX_authenticationEnabled: "true"
-      PULSAR_PREFIX_authorizationEnabled: "true"
-      PULSAR_PREFIX_authenticationProviders: "org.apache.pulsar.broker.authentication.AuthenticationProviderToken"
-      # ========================================================================
-      # JWT Token Configuration (Public Key)
-      # ========================================================================
-      PULSAR_PREFIX_tokenPublicKey: "file:///pulsar/conf/public.key"
-      PULSAR_PREFIX_tokenAuthClaim: "sub"
-      # ========================================================================
-      # Superuser Roles
-      # ========================================================================
-      PULSAR_PREFIX_superUserRoles: "admin"
-      # ========================================================================
-      # Broker Client Authentication (for internal communication)
-      # ========================================================================
-      PULSAR_PREFIX_brokerClientAuthenticationPlugin: "org.apache.pulsar.client.impl.auth.AuthenticationToken"
-      PULSAR_PREFIX_brokerClientAuthenticationParameters: "file:///pulsar/conf/admin-token.txt"
+      authenticationEnabled: "false"
+      authorizationEnabled: "false"
     volumes:
       - pulsar_data:/pulsar/data
-      - ./pulsar-conf/public.key:/pulsar/conf/public.key:ro
-      - ./pulsar-conf/admin-token.txt:/pulsar/conf/admin-token.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-s", "-f", "-H", "Authorization: Bearer $$(cat /pulsar/conf/admin-token.txt)", "http://localhost:8080/admin/v2/brokers/healthcheck"]
+      test: ["CMD", "curl", "-s", "-f", "http://localhost:8080/admin/v2/brokers/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -98,6 +81,25 @@ services:
       - pulsar-console
 
   # ==========================================================================
+  # Database Migrations (runs once at startup)
+  # ==========================================================================
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulsar-console-migrate
+    entrypoint: ["alembic", "upgrade", "head"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pulsar-console
+    profiles:
+      - full
+
+  # ==========================================================================
   # Pulsar Console API (FastAPI)
   # ==========================================================================
   api:
@@ -105,13 +107,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: pulsar-console-api
+    entrypoint: []
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
     ports:
       - "8000:8000"
     environment:
       - APP_NAME=pulsar-console
       - APP_ENV=development
       - DEBUG=true
-      - AUTH_DISABLED=true
+      - OIDC_ENABLED=false
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - PULSAR_ADMIN_URL=http://pulsar:8080
@@ -121,6 +125,8 @@ services:
       - SECRET_KEY=dev-secret-key-change-in-production
       - ENCRYPTION_KEY=dev-encryption-key-change-in-prod
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -146,7 +152,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: pulsar-console-worker
-    command: celery -A app.worker.celery_app worker --loglevel=info
+    entrypoint: []
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
     environment:
       - APP_ENV=development
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
@@ -157,6 +164,8 @@ services:
       - SECRET_KEY=dev-secret-key-change-in-production
       - ENCRYPTION_KEY=dev-encryption-key-change-in-prod
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -177,7 +186,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: pulsar-console-beat
-    command: celery -A app.worker.celery_app beat --loglevel=info
+    entrypoint: []
+    command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
     environment:
       - APP_ENV=development
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console

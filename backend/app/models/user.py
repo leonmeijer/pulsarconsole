@@ -56,6 +56,12 @@ class User(BaseModel):
         nullable=False,
         index=True,
     )
+    is_global_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Global admin has full access regardless of environment roles",
+    )
 
     # Timestamps
     last_login_at: Mapped[datetime | None] = mapped_column(

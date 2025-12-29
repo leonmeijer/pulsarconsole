@@ -2,6 +2,10 @@
 
 import httpx
 from datetime import datetime, timedelta, timezone
+
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID
@@ -290,16 +294,11 @@ class AuthService:
             avatar_url=userinfo.get("picture"),
         )
 
-        # If this is the first user, assign them to the superuser role for all environments
+        # If this is the first user, they are automatically a global admin
+        # (handled in UserRepository.find_or_create_from_oidc)
         if is_first_user:
-            from app.services.seed import SeedService
-            seed_service = SeedService(self.db)
-            # Ensure default roles exist for all environments
-            await seed_service.seed_all_environments()
-            # Assign user to superuser role for all environments
-            await seed_service.assign_user_to_superuser_role_all_environments(user.id)
             logger.info(
-                "First user assigned superuser role",
+                "First user created as global admin",
                 user_id=str(user.id),
                 email=user.email,
             )
