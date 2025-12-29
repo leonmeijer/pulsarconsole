@@ -45,9 +45,14 @@ const settingsItems = [
     { icon: Monitor, label: "Sessions", path: "/settings/sessions" },
 ];
 
-const adminSettingsItems = [
+// OIDC-only admin items (require OIDC to be enabled)
+const oidcAdminItems = [
     { icon: Shield, label: "Roles", path: "/settings/roles" },
     { icon: Users, label: "Users", path: "/settings/users" },
+];
+
+// Always visible for superusers (Pulsar broker config)
+const pulsarAdminItems = [
     { icon: Lock, label: "Pulsar Auth", path: "/settings/pulsar-auth" },
 ];
 
@@ -59,10 +64,16 @@ export default function Sidebar() {
     const { favorites, removeFavorite } = useFavorites();
     const { user, authRequired, isAuthenticated } = useAuth();
 
-    const showSettings = authRequired && isAuthenticated;
-    // Check if user has superuser role
+    // Show user settings only when OIDC is enabled and user is authenticated
+    const showUserSettings = authRequired && isAuthenticated;
+    // Check if user has superuser role (for OIDC mode) or if running without OIDC (dev/superuser mode)
     const hasSuperuserRole = user?.roles?.some((role) => role.name === 'superuser') ?? false;
-    const showAdminSettings = hasSuperuserRole;
+    // Show OIDC admin items (Roles/Users) only when OIDC is enabled AND user is superuser
+    const showOidcAdminItems = authRequired && hasSuperuserRole;
+    // Show Pulsar admin items (Pulsar Auth) for superusers OR when OIDC is disabled (dev mode)
+    const showPulsarAdminItems = hasSuperuserRole || !authRequired;
+    // Show settings section if any settings items should be visible
+    const showSettings = showUserSettings || showPulsarAdminItems;
 
     return (
         <motion.aside
@@ -230,7 +241,8 @@ export default function Sidebar() {
                                     className="overflow-hidden"
                                 >
                                     <div className="space-y-1 mt-2 pl-2">
-                                        {settingsItems.map((item) => {
+                                        {/* User settings - only when OIDC enabled */}
+                                        {showUserSettings && settingsItems.map((item) => {
                                             const isActive = location.pathname === item.path;
                                             return (
                                                 <Link
@@ -248,10 +260,35 @@ export default function Sidebar() {
                                                 </Link>
                                             );
                                         })}
-                                        {showAdminSettings && (
+                                        {/* OIDC admin items (Roles/Users) - only when OIDC enabled AND superuser */}
+                                        {showOidcAdminItems && (
                                             <>
-                                                <div className="h-px bg-white/10 my-2" />
-                                                {adminSettingsItems.map((item) => {
+                                                {showUserSettings && <div className="h-px bg-white/10 my-2" />}
+                                                {oidcAdminItems.map((item) => {
+                                                    const isActive = location.pathname === item.path;
+                                                    return (
+                                                        <Link
+                                                            key={item.path}
+                                                            to={item.path}
+                                                            className={cn(
+                                                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+                                                                isActive
+                                                                    ? "bg-primary/20 text-primary"
+                                                                    : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            <item.icon size={16} className={cn(isActive ? "text-primary" : "text-muted-foreground")} />
+                                                            <span className="text-sm">{item.label}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </>
+                                        )}
+                                        {/* Pulsar admin items - always for superusers OR when OIDC disabled */}
+                                        {showPulsarAdminItems && (
+                                            <>
+                                                {(showUserSettings || showOidcAdminItems) && <div className="h-px bg-white/10 my-2" />}
+                                                {pulsarAdminItems.map((item) => {
                                                     const isActive = location.pathname === item.path;
                                                     return (
                                                         <Link
