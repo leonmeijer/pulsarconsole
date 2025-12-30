@@ -35,8 +35,13 @@ async def has_superuser_access(user: User, db: AsyncSession) -> bool:
     """
     Check if a user has superuser access.
 
-    A user has superuser access if they have the "superuser" role in any environment.
+    A user has superuser access if:
+    - They are a global admin (is_global_admin=True), OR
+    - They have the "superuser" role in any environment.
     """
+    if user.is_global_admin:
+        return True
+
     from sqlalchemy import select, exists
     from app.models.role import Role
     from app.models.user_role import UserRole

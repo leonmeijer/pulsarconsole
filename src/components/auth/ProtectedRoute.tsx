@@ -11,6 +11,8 @@ export default function ProtectedRoute({ children, requireAuth = true }: Protect
   const { isAuthenticated, isLoading, authRequired } = useAuth();
   const location = useLocation();
 
+  console.log('ProtectedRoute:', { isLoading, authRequired, isAuthenticated });
+
   // Show loading while checking auth state
   if (isLoading) {
     return (

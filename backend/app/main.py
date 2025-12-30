@@ -31,6 +31,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app_name=settings.app_name,
         environment=settings.app_env,
         debug=settings.debug,
+        oidc_enabled=settings.oidc_enabled,
+        oidc_issuer=settings.oidc_issuer_url,
+        oidc_client_id=settings.oidc_client_id,
     )
 
     # Initialize database

@@ -156,9 +156,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await api.get<{ providers: OIDCProvider[]; auth_required: boolean }>(
         '/api/v1/auth/providers'
       );
+      console.log('Auth providers response:', response.data);
       setProviders(response.data.providers);
       setAuthRequired(response.data.auth_required);
-    } catch {
+    } catch (error) {
+      console.error('Failed to fetch auth providers:', error);
       // If we can't fetch providers, assume auth is not required
       setAuthRequired(false);
       setProviders([]);
@@ -168,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
+      console.log('initAuth starting...');
       setIsLoading(true);
 
       // Fetch providers first

@@ -115,7 +115,12 @@ services:
       - APP_NAME=pulsar-console
       - APP_ENV=development
       - DEBUG=true
-      - OIDC_ENABLED=false
+      # OIDC Configuration
+      - OIDC_ENABLED=true
+      - OIDC_USE_PKCE=true
+      - OIDC_ISSUER_URL=https://netbird.lvms.nl
+      - OIDC_CLIENT_ID=352915667466387460
+      # Database & Cache
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - PULSAR_ADMIN_URL=http://pulsar:8080

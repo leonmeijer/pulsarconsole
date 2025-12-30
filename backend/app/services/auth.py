@@ -302,6 +302,10 @@ class AuthService:
                 user_id=str(user.id),
                 email=user.email,
             )
+            # Assign superuser role to all environments for the first user
+            from app.services.seed import SeedService
+            seed_service = SeedService(self.db)
+            await seed_service.assign_user_to_superuser_role_all_environments(user.id)
 
         # Create session
         token_pair, session = await self.create_session(

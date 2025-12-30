@@ -52,11 +52,16 @@ class UserRepository(BaseRepository[User]):
         self, skip: int = 0, limit: int = 100
     ) -> list[User]:
         """Get all active users."""
+        from app.config import settings
+        
+        query = select(User).where(User.is_active == True)
+        
+        # In OIDC mode, hide the system user from the list to avoid confusion
+        if settings.oidc_enabled:
+            query = query.where(User.email != "system@localhost")
+            
         result = await self.session.execute(
-            select(User)
-            .where(User.is_active == True)
-            .offset(skip)
-            .limit(limit)
+            query.offset(skip).limit(limit)
         )
         return list(result.scalars().all())
 
@@ -118,9 +123,13 @@ class UserRepository(BaseRepository[User]):
             await self.session.flush()
             return user, False, False
 
-        # Check if this is the first user in the system
-        user_count = await self.count_all()
-        is_first_user = user_count == 0
+        # Check if this is the first user in the system (excluding dev SYSTEM user)
+        # We check for any user that is not the system user
+        result = await self.session.execute(
+            select(func.count(User.id)).where(User.email != "system@localhost")
+        )
+        real_user_count = result.scalar_one()
+        is_first_user = real_user_count == 0
 
         # Create new user - first user becomes global admin
         user = await self.create(

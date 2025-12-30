@@ -131,6 +131,8 @@ async def get_providers(
     """Get available authentication providers."""
     from app.repositories.oidc_provider import OIDCProviderRepository
     from app.repositories.environment import EnvironmentRepository
+    from app.core.logging import get_logger
+    logger = get_logger(__name__)
 
     oidc_repo = OIDCProviderRepository(db)
     env_repo = EnvironmentRepository(db)
@@ -138,6 +140,11 @@ async def get_providers(
     provider_infos = []
 
     # Check global OIDC config from environment variables first
+    logger.debug("Checking global OIDC config", 
+                 enabled=settings.oidc_enabled, 
+                 issuer=settings.oidc_issuer_url, 
+                 client_id=settings.oidc_client_id)
+    
     if settings.oidc_enabled and settings.oidc_issuer_url and settings.oidc_client_id:
         provider_infos.append(
             OIDCProviderInfo(
@@ -165,6 +172,8 @@ async def get_providers(
 
     # Auth is required if any provider is configured (global or per-environment)
     auth_required = len(provider_infos) > 0
+    
+    logger.debug("Final providers list", count=len(provider_infos), auth_required=auth_required)
 
     return ProvidersResponse(
         providers=provider_infos,
