@@ -52,18 +52,18 @@ function CodeBlock({ code, language = 'bash' }: { code: string; language?: strin
 
   return (
     <div className="relative group">
-      <pre className={`p-4 bg-zinc-900 rounded-lg text-sm overflow-x-auto language-${language}`}>
-        <code className="text-zinc-300">{code}</code>
+      <pre className={`p-4 bg-black/40 rounded-lg text-sm overflow-x-auto language-${language}`}>
+        <code className="text-muted-foreground">{code}</code>
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 p-1.5 bg-zinc-800 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-2 right-2 p-1.5 bg-white/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
         title="Copy"
       >
         {copied ? (
           <Check size={14} className="text-green-500" />
         ) : (
-          <Copy size={14} className="text-zinc-400" />
+          <Copy size={14} className="text-muted-foreground" />
         )}
       </button>
     </div>
@@ -98,16 +98,16 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-zinc-900 border border-zinc-700 rounded-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col"
+            className="bg-popover border border-white/10 rounded-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col glass"
           >
             {/* Header */}
-            <div className="p-6 border-b border-zinc-700 flex items-center justify-between flex-shrink-0">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <HelpCircle className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">Pulsar Authentication Guide</h2>
+                  <h2 className="text-xl font-bold text-popover-foreground">Pulsar Authentication Guide</h2>
                   <p className="text-sm text-muted-foreground">
                     How to enable and configure authentication
                   </p>
@@ -115,7 +115,7 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
@@ -124,7 +124,7 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
             {/* Content */}
             <div className="flex flex-1 overflow-hidden">
               {/* Sidebar */}
-              <div className="w-56 border-r border-zinc-700 p-4 flex-shrink-0 overflow-y-auto">
+              <div className="w-56 border-r border-white/10 p-4 flex-shrink-0 overflow-y-auto">
                 <nav className="space-y-1">
                   {sections.map((section) => (
                     <button
@@ -134,7 +134,7 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
                         'w-full px-3 py-2 rounded-lg text-left flex items-center gap-2 transition-colors text-sm',
                         activeSection === section.id
                           ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-zinc-800 text-muted-foreground'
+                          : 'hover:bg-white/5 text-muted-foreground hover:text-foreground'
                       )}
                     >
                       <section.icon size={16} />
@@ -172,19 +172,19 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
                     <div>
                       <h4 className="font-medium mb-2">Key Configuration Properties</h4>
                       <div className="space-y-2">
-                        <div className="p-3 bg-zinc-800 rounded-lg">
+                        <div className="p-3 bg-white/5 rounded-lg">
                           <code className="text-primary text-sm">authenticationEnabled</code>
                           <p className="text-xs text-muted-foreground mt-1">Enable/disable authentication (true/false)</p>
                         </div>
-                        <div className="p-3 bg-zinc-800 rounded-lg">
+                        <div className="p-3 bg-white/5 rounded-lg">
                           <code className="text-primary text-sm">authorizationEnabled</code>
                           <p className="text-xs text-muted-foreground mt-1">Enable/disable authorization (true/false)</p>
                         </div>
-                        <div className="p-3 bg-zinc-800 rounded-lg">
+                        <div className="p-3 bg-white/5 rounded-lg">
                           <code className="text-primary text-sm">authenticationProviders</code>
                           <p className="text-xs text-muted-foreground mt-1">Comma-separated list of auth provider classes</p>
                         </div>
-                        <div className="p-3 bg-zinc-800 rounded-lg">
+                        <div className="p-3 bg-white/5 rounded-lg">
                           <code className="text-primary text-sm">superUserRoles</code>
                           <p className="text-xs text-muted-foreground mt-1">Comma-separated list of roles with admin access</p>
                         </div>
@@ -630,13 +630,13 @@ bin/pulsar-daemon start broker
 
                     <div>
                       <h4 className="font-medium mb-3">How It Works</h4>
-                      <div className="p-4 bg-zinc-800 rounded-xl space-y-3">
+                      <div className="p-4 bg-white/5 rounded-xl space-y-3">
                         <div className="flex items-start gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                             <span className="text-primary font-bold">1</span>
                           </div>
                           <div>
-                            <p className="font-medium">Secret Key Generation</p>
+                            <p className="font-medium text-popover-foreground">Secret Key Generation</p>
                             <p className="text-sm text-muted-foreground">
                               A cryptographic key is generated and stored securely on the broker.
                             </p>
@@ -647,7 +647,7 @@ bin/pulsar-daemon start broker
                             <span className="text-primary font-bold">2</span>
                           </div>
                           <div>
-                            <p className="font-medium">Token Creation</p>
+                            <p className="font-medium text-popover-foreground">Token Creation</p>
                             <p className="text-sm text-muted-foreground">
                               Tokens are signed using this key. The "subject" becomes the role/principal.
                             </p>
@@ -658,7 +658,7 @@ bin/pulsar-daemon start broker
                             <span className="text-primary font-bold">3</span>
                           </div>
                           <div>
-                            <p className="font-medium">Token Validation</p>
+                            <p className="font-medium text-popover-foreground">Token Validation</p>
                             <p className="text-sm text-muted-foreground">
                               Broker validates incoming tokens using the same key. Invalid signatures are rejected.
                             </p>
@@ -670,7 +670,7 @@ bin/pulsar-daemon start broker
                     <div>
                       <h4 className="font-medium mb-3">Symmetric vs Asymmetric Keys</h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-blue-400 mb-2">Symmetric (Secret Key)</p>
                           <p className="text-sm text-muted-foreground mb-3">Same key for signing and verification</p>
                           <CodeBlock
@@ -682,7 +682,7 @@ bin/pulsar tokens create-secret-key \\
 tokenSecretKey=file:///path/secret.key`}
                           />
                         </div>
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-green-400 mb-2">Asymmetric (Key Pair)</p>
                           <p className="text-sm text-muted-foreground mb-3">Private key signs, public key verifies</p>
                           <CodeBlock
@@ -721,7 +721,7 @@ bin/pulsar tokens create \\
 
                     <div>
                       <h4 className="font-medium mb-3">Token Structure (JWT)</h4>
-                      <div className="p-4 bg-zinc-800 rounded-lg font-mono text-sm">
+                      <div className="p-4 bg-white/5 rounded-lg font-mono text-sm">
                         <p className="text-red-400">eyJhbGciOiJIUzI1NiJ9</p>
                         <p className="text-muted-foreground text-xs mb-2">Header (algorithm)</p>
                         <p className="text-green-400">.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTczNTY4OTYwMH0</p>
@@ -789,7 +789,7 @@ bin/pulsar tokens create \\
                       </p>
 
                       <div className="space-y-4">
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-yellow-400 mb-2">1. Discovery URL → JWKS Endpoint</p>
                           <p className="text-sm text-muted-foreground mb-3">
                             Every OIDC provider has a discovery URL that contains the JWKS endpoint location:
@@ -808,7 +808,7 @@ https://your-provider.com/.well-known/openid-configuration
                           />
                         </div>
 
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-yellow-400 mb-2">2. JWKS Endpoint Response</p>
                           <p className="text-sm text-muted-foreground mb-3">
                             The JWKS endpoint returns a set of public keys used to sign tokens:
@@ -839,7 +839,7 @@ https://your-provider.com/.well-known/openid-configuration
                           />
                         </div>
 
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-yellow-400 mb-2">3. Token Validation Flow</p>
                           <div className="text-sm space-y-2 text-muted-foreground">
                             <p>① Client sends JWT token to Pulsar broker</p>
@@ -851,7 +851,7 @@ https://your-provider.com/.well-known/openid-configuration
                           </div>
                         </div>
 
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-yellow-400 mb-2">4. Benefits of JWKS</p>
                           <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
                             <li><strong>Automatic Key Rotation:</strong> Provider can rotate keys without Pulsar restart</li>
@@ -864,7 +864,7 @@ https://your-provider.com/.well-known/openid-configuration
                     </div>
 
                     <div>
-                      <h4 className="font-medium mb-3">Find Your JWKS URL</h4>
+                      <h4 className="font-medium mb-3 text-popover-foreground">Find Your JWKS URL</h4>
                       <p className="text-sm text-muted-foreground mb-3">
                         Use curl to discover the JWKS endpoint from your OIDC provider:
                       </p>
@@ -881,28 +881,28 @@ curl -s https://your-provider.com/.well-known/jwks.json | jq .`}
                     </div>
 
                     <div>
-                      <h4 className="font-medium mb-3">Step 1: Configure OIDC Provider</h4>
+                      <h4 className="font-medium mb-3 text-popover-foreground">Step 1: Configure OIDC Provider</h4>
                       <p className="text-sm text-muted-foreground mb-3">
                         Create a client application in your OIDC provider:
                       </p>
-                      <div className="p-4 bg-zinc-800 rounded-lg">
+                      <div className="p-4 bg-white/5 rounded-lg">
                         <table className="w-full text-sm">
                           <tbody>
-                            <tr className="border-b border-zinc-700">
+                            <tr className="border-b border-white/10">
                               <td className="py-2 text-muted-foreground">Grant Type</td>
-                              <td className="py-2">Client Credentials</td>
+                              <td className="py-2 text-popover-foreground">Client Credentials</td>
                             </tr>
-                            <tr className="border-b border-zinc-700">
+                            <tr className="border-b border-white/10">
                               <td className="py-2 text-muted-foreground">Client ID</td>
-                              <td className="py-2">pulsar-broker</td>
+                              <td className="py-2 text-popover-foreground">pulsar-broker</td>
                             </tr>
-                            <tr className="border-b border-zinc-700">
+                            <tr className="border-b border-white/10">
                               <td className="py-2 text-muted-foreground">Client Secret</td>
-                              <td className="py-2">(generated by provider)</td>
+                              <td className="py-2 text-popover-foreground">(generated by provider)</td>
                             </tr>
                             <tr>
                               <td className="py-2 text-muted-foreground">Audience</td>
-                              <td className="py-2">pulsar (or your custom value)</td>
+                              <td className="py-2 text-popover-foreground">pulsar (or your custom value)</td>
                             </tr>
                           </tbody>
                         </table>
@@ -976,9 +976,9 @@ bin/pulsar-admin \\
                     </div>
 
                     <div>
-                      <h4 className="font-medium mb-3">Provider-Specific Examples</h4>
+                      <h4 className="font-medium mb-3 text-popover-foreground">Provider-Specific Examples</h4>
                       <div className="space-y-4">
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-orange-400 mb-2">Keycloak</p>
                           <CodeBlock
                             language="properties"
@@ -992,7 +992,7 @@ tokenAudience=pulsar-broker`}
                           />
                         </div>
 
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-purple-400 mb-2">Auth0</p>
                           <CodeBlock
                             language="properties"
@@ -1006,7 +1006,7 @@ tokenAudience=https://pulsar.example.com`}
                           />
                         </div>
 
-                        <div className="p-4 bg-zinc-800 rounded-lg">
+                        <div className="p-4 bg-white/5 rounded-lg">
                           <p className="font-medium text-cyan-400 mb-2">Zitadel</p>
                           <CodeBlock
                             language="properties"

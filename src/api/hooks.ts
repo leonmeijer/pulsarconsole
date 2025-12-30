@@ -1437,3 +1437,42 @@ export function useRbacSync() {
     },
   });
 }
+
+// =============================================================================
+// Theme Preferences
+// =============================================================================
+
+export interface ThemePreference {
+  theme: string | null;
+  mode: string | null;
+}
+
+export const themeKeys = {
+  preference: ['theme', 'preference'] as const,
+};
+
+export function useThemePreference(enabled: boolean = true) {
+  return useQuery<ThemePreference>({
+    queryKey: themeKeys.preference,
+    queryFn: async () => {
+      const { data } = await api.get<ThemePreference>('/api/v1/auth/preferences/theme');
+      return data;
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour - theme doesn't change often
+    retry: false, // Don't retry if not authenticated
+    enabled, // Only fetch when enabled (user is authenticated)
+  });
+}
+
+export function useUpdateThemePreference() {
+  const queryClient = useQueryClient();
+  return useMutation<ThemePreference, Error, { theme?: string; mode?: string }>({
+    mutationFn: async (preferences) => {
+      const { data } = await api.put<ThemePreference>('/api/v1/auth/preferences/theme', preferences);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(themeKeys.preference, data);
+    },
+  });
+}

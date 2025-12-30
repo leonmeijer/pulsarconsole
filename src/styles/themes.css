@@ -1,0 +1,382 @@
+/* =============================================================================
+   PULSAR MANAGER - THEME SYSTEM
+   
+   8 thema-varianten:
+   - Current Light / Dark (bestaande stijl)
+   - Shadcn Light / Dark (van shadcn-admin)
+   - Spireflow Snowlight / Midnight / Charcoal / Obsidian
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   CURRENT THEME - LIGHT
+   ----------------------------------------------------------------------------- */
+html.theme-current-light {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #f8f9fa;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #a855f7;
+  --secondary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0a0a0a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: #3b82f6;
+  --radius: 0.625rem;
+  
+  /* Sidebar */
+  --sidebar-background: #f8f9fa;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e2e8f0;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: rgba(0, 0, 0, 0.1);
+  
+  /* Charts */
+  --chart-1: #3b82f6;
+  --chart-2: #a855f7;
+  --chart-3: #22c55e;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.1);
+}
+
+/* -----------------------------------------------------------------------------
+   CURRENT THEME - DARK (huidige standaard)
+   ----------------------------------------------------------------------------- */
+html.theme-current-dark {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: rgba(255, 255, 255, 0.05);
+  --card-foreground: #ffffff;
+  --popover: #1a1a1a;
+  --popover-foreground: #ffffff;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #a855f7;
+  --secondary-foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.1);
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+  --accent: rgba(255, 255, 255, 0.1);
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #3b82f6;
+  --radius: 0.625rem;
+  
+  /* Sidebar */
+  --sidebar-background: rgba(255, 255, 255, 0.02);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  
+  /* Charts */
+  --chart-1: #3b82f6;
+  --chart-2: #a855f7;
+  --chart-3: #22c55e;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* -----------------------------------------------------------------------------
+   SHADCN THEME - LIGHT
+   Bron: shadcn-admin theme.css
+   ----------------------------------------------------------------------------- */
+html.theme-shadcn-light {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.129 0.042 264.695);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+  --radius: 0.625rem;
+  
+  /* Sidebar */
+  --sidebar-background: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.129 0.042 264.695);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.968 0.007 247.896);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
+  --sidebar-border: oklch(0.929 0.013 255.508);
+  
+  /* Charts */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: oklch(0.929 0.013 255.508);
+}
+
+/* -----------------------------------------------------------------------------
+   SHADCN THEME - DARK
+   Bron: shadcn-admin theme.css .dark
+   ----------------------------------------------------------------------------- */
+html.theme-shadcn-dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.14 0.04 259.21);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.55 0.15 264);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.35 0.05 260);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.55 0.15 264);
+  --radius: 0.625rem;
+  
+  /* Sidebar */
+  --sidebar-background: oklch(0.129 0.042 264.695);
+  --sidebar-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-primary: oklch(0.55 0.15 264);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.35 0.05 260);
+  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  
+  /* Charts */
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  
+  /* Glass effect */
+  --glass-bg: oklch(0.14 0.04 259.21 / 80%);
+  --glass-border: oklch(1 0 0 / 10%);
+}
+
+/* -----------------------------------------------------------------------------
+   SPIREFLOW THEME - SNOWLIGHT (Light)
+   Bron: spireflow snowlight.ts
+   ----------------------------------------------------------------------------- */
+html.theme-spireflow-snowlight {
+  --background: rgb(255, 255, 255);
+  --foreground: rgb(22, 40, 74);
+  --card: rgb(247, 247, 247);
+  --card-foreground: rgb(22, 40, 74);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(22, 40, 74);
+  --primary: rgb(118, 167, 247);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(240, 240, 245);
+  --secondary-foreground: rgb(22, 40, 74);
+  --muted: rgb(240, 240, 245);
+  --muted-foreground: rgba(0, 0, 0, 0.6);
+  --accent: rgb(101, 150, 231);
+  --accent-foreground: rgb(22, 40, 74);
+  --destructive: rgb(213, 61, 79);
+  --destructive-foreground: rgb(255, 255, 255);
+  --border: rgba(0, 0, 0, 0.12);
+  --input: rgba(0, 0, 0, 0.15);
+  --ring: rgb(118, 167, 247);
+  --radius: 0.5rem;
+  
+  /* Sidebar */
+  --sidebar-background: rgb(255, 255, 255);
+  --sidebar-foreground: rgba(0, 0, 0, 0.9);
+  --sidebar-primary: rgb(0, 96, 255);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(101, 150, 231, 0.1);
+  --sidebar-accent-foreground: rgb(0, 96, 255);
+  --sidebar-border: rgba(0, 0, 0, 0.12);
+  
+  /* Charts */
+  --chart-1: rgb(118, 167, 247);
+  --chart-2: rgb(125, 214, 230);
+  --chart-3: rgb(35, 140, 99);
+  --chart-4: rgb(151, 96, 39);
+  --chart-5: rgb(213, 61, 79);
+  
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.12);
+}
+
+/* -----------------------------------------------------------------------------
+   SPIREFLOW THEME - MIDNIGHT (Dark)
+   Bron: spireflow midnight.ts
+   ----------------------------------------------------------------------------- */
+html.theme-spireflow-midnight {
+  --background: rgb(48, 52, 62);
+  --foreground: rgb(255, 255, 255);
+  --card: rgb(41, 45, 55);
+  --card-foreground: rgb(255, 255, 255);
+  --popover: rgb(58, 62, 72);
+  --popover-foreground: rgb(255, 255, 255);
+  --primary: #06b6d4;
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(58, 62, 72);
+  --secondary-foreground: rgb(255, 255, 255);
+  --muted: rgb(60, 67, 79);
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+  --accent: rgb(68, 74, 87);
+  --accent-foreground: rgb(255, 255, 255);
+  --destructive: rgb(253, 164, 175);
+  --destructive-foreground: rgb(0, 0, 0);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #06b6d4;
+  --radius: 0.5rem;
+  
+  /* Sidebar */
+  --sidebar-background: rgb(48, 52, 62);
+  --sidebar-foreground: rgba(255, 255, 255, 0.85);
+  --sidebar-primary: #06b6d4;
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(68, 74, 87, 0.6);
+  --sidebar-accent-foreground: rgb(255, 255, 255);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  
+  /* Charts */
+  --chart-1: rgb(6, 182, 212);
+  --chart-2: rgb(111, 119, 132);
+  --chart-3: rgb(110, 231, 183);
+  --chart-4: rgb(253, 186, 116);
+  --chart-5: rgb(253, 164, 175);
+  
+  /* Glass effect */
+  --glass-bg: rgba(48, 52, 62, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+/* -----------------------------------------------------------------------------
+   SPIREFLOW THEME - CHARCOAL (Dark)
+   Bron: spireflow charcoal.ts
+   ----------------------------------------------------------------------------- */
+html.theme-spireflow-charcoal {
+  --background: rgb(44, 47, 53);
+  --foreground: rgb(235, 235, 235);
+  --card: rgb(36, 39, 45);
+  --card-foreground: rgb(235, 235, 235);
+  --popover: rgb(54, 57, 64);
+  --popover-foreground: rgb(235, 235, 235);
+  --primary: rgb(98, 136, 227);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(54, 57, 64);
+  --secondary-foreground: rgb(235, 235, 235);
+  --muted: rgba(255, 255, 255, 0.07);
+  --muted-foreground: rgb(209, 209, 211);
+  --accent: rgb(87, 135, 251);
+  --accent-foreground: rgb(255, 255, 255);
+  --destructive: rgb(253, 164, 175);
+  --destructive-foreground: rgb(0, 0, 0);
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: rgb(98, 136, 227);
+  --radius: 0.5rem;
+  
+  /* Sidebar */
+  --sidebar-background: rgb(44, 47, 53);
+  --sidebar-foreground: rgba(224, 227, 230, 0.8);
+  --sidebar-primary: rgb(98, 136, 227);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgba(255, 255, 255, 0.07);
+  --sidebar-accent-foreground: rgb(255, 255, 255);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  
+  /* Charts */
+  --chart-1: rgb(98, 136, 227);
+  --chart-2: hsl(199.4, 13.3%, 45.7%);
+  --chart-3: rgb(110, 231, 183);
+  --chart-4: rgb(253, 186, 116);
+  --chart-5: rgb(253, 164, 175);
+  
+  /* Glass effect */
+  --glass-bg: rgba(44, 47, 53, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.07);
+}
+
+/* -----------------------------------------------------------------------------
+   SPIREFLOW THEME - OBSIDIAN (Dark)
+   Bron: spireflow obsidian.ts
+   ----------------------------------------------------------------------------- */
+html.theme-spireflow-obsidian {
+  --background: rgb(36, 40, 45);
+  --foreground: rgb(231, 233, 236);
+  --card: rgb(31, 34, 38);
+  --card-foreground: rgb(231, 233, 236);
+  --popover: rgb(44, 49, 55);
+  --popover-foreground: rgb(231, 233, 236);
+  --primary: rgb(61, 185, 133);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(44, 49, 55);
+  --secondary-foreground: rgb(231, 233, 236);
+  --muted: rgba(255, 255, 255, 0.07);
+  --muted-foreground: rgb(201, 203, 207);
+  --accent: rgb(61, 142, 108);
+  --accent-foreground: rgb(255, 255, 255);
+  --destructive: rgb(253, 164, 175);
+  --destructive-foreground: rgb(0, 0, 0);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: rgb(61, 185, 133);
+  --radius: 0.5rem;
+  
+  /* Sidebar */
+  --sidebar-background: rgb(36, 40, 45);
+  --sidebar-foreground: rgba(224, 227, 230, 0.8);
+  --sidebar-primary: rgb(61, 185, 133);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgba(255, 255, 255, 0.07);
+  --sidebar-accent-foreground: rgb(255, 255, 255);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  
+  /* Charts */
+  --chart-1: rgb(61, 185, 133);
+  --chart-2: rgb(83, 133, 198);
+  --chart-3: rgb(110, 231, 183);
+  --chart-4: rgb(253, 186, 116);
+  --chart-5: rgb(253, 164, 175);
+  
+  /* Glass effect */
+  --glass-bg: rgba(36, 40, 45, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}

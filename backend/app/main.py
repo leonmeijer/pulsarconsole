@@ -53,9 +53,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             seed_service = SeedService(session)
             await seed_service.seed_all_environments()
             await session.commit()
-        logger.info("Default roles and permissions seeded")
+        logger.info("Permissions and environment roles initialized")
     except Exception as e:
-        logger.warning("Failed to seed default data", error=str(e))
+        logger.warning("Failed to initialize seed data", error=str(e))
 
     # Initialize Redis
     try:
@@ -83,6 +83,22 @@ app = FastAPI(
 )
 
 # Add middleware (order matters - first added is outermost)
+if settings.elastic_apm_enabled:
+    try:
+        from elasticapm.contrib.starlette import ElasticAPM
+        from elasticapm.base import Client
+        
+        apm_client = Client({
+            'SERVICE_NAME': settings.elastic_apm_service_name,
+            'SERVER_URL': settings.elastic_apm_server_url,
+            'SECRET_TOKEN': settings.elastic_apm_secret_token,
+            'ENVIRONMENT': settings.app_env,
+        })
+        app.add_middleware(ElasticAPM, client=apm_client)
+        logger.info("Elastic APM middleware enabled")
+    except ImportError:
+        logger.warning("elastic-apm not installed, skipping APM middleware")
+
 app.add_middleware(ErrorHandlerMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(

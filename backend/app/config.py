@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # Application Settings
     # -------------------------------------------------------------------------
-    app_name: str = Field(default="pulsar-console-api")
+    app_name: str = Field(default="pulsar-manager-api")
     app_env: Literal["development", "staging", "production"] = Field(default="development")
     debug: bool = Field(default=False)
     log_level: str = Field(default="INFO")
@@ -39,10 +39,10 @@ class Settings(BaseSettings):
     # Database (PostgreSQL)
     # -------------------------------------------------------------------------
     database_url: str = Field(
-        default="postgresql+asyncpg://pulsar:pulsar@localhost:5432/pulsar_manager"
+        default="postgresql+asyncpg://pulsar:pulsar@localhost:5432/pulsar_console"
     )
-    database_pool_size: int = Field(default=5)
-    database_max_overflow: int = Field(default=10)
+    database_pool_size: int = Field(default=3)
+    database_max_overflow: int = Field(default=5)
     database_echo: bool = Field(default=False)
 
     # -------------------------------------------------------------------------
@@ -144,6 +144,14 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     metrics_enabled: bool = Field(default=True)
     metrics_path: str = Field(default="/metrics")
+
+    # -------------------------------------------------------------------------
+    # Elastic APM
+    # -------------------------------------------------------------------------
+    elastic_apm_enabled: bool = Field(default=False)
+    elastic_apm_server_url: str | None = Field(default=None)
+    elastic_apm_secret_token: str | None = Field(default=None)
+    elastic_apm_service_name: str = Field(default="pulsar-console-api")
 
     # -------------------------------------------------------------------------
     # Computed Properties

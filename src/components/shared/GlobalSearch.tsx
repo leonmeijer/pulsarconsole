@@ -175,18 +175,18 @@ export default function GlobalSearch() {
                 onFocus={() => setIsOpen(true)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search topics, subscriptions, brokers..."
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-full py-2 pl-10 pr-4 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all hover:bg-zinc-700/50 text-sm"
+                className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all hover:bg-white/10 text-sm"
             />
 
             {isOpen && query.trim() && (
                 <div
                     ref={dropdownRef}
-                    className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
+                    className="absolute top-full left-0 right-0 mt-2 bg-popover border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 glass"
                 >
                     {isLoading ? (
                         <div className="p-6 text-center">
-                            <Loader2 className="w-6 h-6 text-zinc-500 mx-auto animate-spin" />
-                            <p className="text-zinc-500 text-sm mt-2">Searching...</p>
+                            <Loader2 className="w-6 h-6 text-muted-foreground mx-auto animate-spin" />
+                            <p className="text-muted-foreground text-sm mt-2">Searching...</p>
                         </div>
                     ) : results.length > 0 ? (
                         <div className="py-2 max-h-[400px] overflow-y-auto">
@@ -197,54 +197,54 @@ export default function GlobalSearch() {
                                     onMouseEnter={() => setSelectedIndex(index)}
                                     className={`w-full px-4 py-3 flex items-center gap-3 transition-colors ${
                                         index === selectedIndex
-                                            ? "bg-zinc-800"
-                                            : "hover:bg-zinc-800/50"
+                                            ? "bg-white/10"
+                                            : "hover:bg-white/5"
                                     }`}
                                 >
-                                    <div className="p-2 bg-zinc-800 rounded-lg">
+                                    <div className="p-2 bg-white/5 rounded-lg">
                                         {getTypeIcon(result.type)}
                                     </div>
                                     <div className="flex-1 text-left min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-medium truncate">
+                                            <span className="font-medium truncate text-popover-foreground">
                                                 {result.name}
                                             </span>
-                                            <span className="text-xs px-2 py-0.5 bg-zinc-700 rounded text-zinc-400 flex-shrink-0">
+                                            <span className="text-xs px-2 py-0.5 bg-white/10 rounded text-muted-foreground flex-shrink-0">
                                                 {getTypeLabel(result.type)}
                                             </span>
                                         </div>
                                         {result.description && (
-                                            <p className="text-xs text-zinc-500 truncate mt-0.5">
+                                            <p className="text-xs text-muted-foreground truncate mt-0.5">
                                                 {result.description}
                                             </p>
                                         )}
                                     </div>
-                                    <ArrowRight className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                                    <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                 </button>
                             ))}
                         </div>
                     ) : (
                         <div className="p-6 text-center">
-                            <Search className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                            <p className="text-zinc-400 text-sm">No results found</p>
-                            <p className="text-zinc-600 text-xs mt-1">
+                            <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                            <p className="text-muted-foreground text-sm">No results found</p>
+                            <p className="text-muted-foreground/60 text-xs mt-1">
                                 Try searching for topics, subscriptions, or brokers
                             </p>
                         </div>
                     )}
 
-                    <div className="px-4 py-2 border-t border-zinc-700 bg-zinc-800/50">
-                        <div className="flex items-center gap-4 text-xs text-zinc-500">
+                    <div className="px-4 py-2 border-t border-white/10 bg-white/5">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
-                                <kbd className="px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-400">↑↓</kbd>
+                                <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-muted-foreground">↑↓</kbd>
                                 navigate
                             </span>
                             <span className="flex items-center gap-1">
-                                <kbd className="px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-400">↵</kbd>
+                                <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-muted-foreground">↵</kbd>
                                 open
                             </span>
                             <span className="flex items-center gap-1">
-                                <kbd className="px-1.5 py-0.5 bg-zinc-700 rounded text-zinc-400">esc</kbd>
+                                <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-muted-foreground">esc</kbd>
                                 close
                             </span>
                         </div>

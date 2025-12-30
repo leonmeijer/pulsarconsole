@@ -58,14 +58,32 @@ class OIDCConfig:
         if self._metadata:
             return self._metadata
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.issuer_url}/.well-known/openid-configuration",
-                timeout=10.0,
+        discovery_url = f"{self.issuer_url}/.well-known/openid-configuration"
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    discovery_url,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                self._metadata = response.json()
+                return self._metadata
+        except httpx.ConnectTimeout:
+            raise ValueError(
+                f"Connection timeout: Unable to reach Identity Provider at {self.issuer_url}. "
+                "Please verify the issuer URL is correct and the provider is running."
             )
-            response.raise_for_status()
-            self._metadata = response.json()
-            return self._metadata
+        except httpx.ConnectError as e:
+            raise ValueError(
+                f"Connection failed: Unable to connect to Identity Provider at {self.issuer_url}. "
+                f"Error: {e}. Please check if the provider is accessible from this server."
+            )
+        except httpx.HTTPStatusError as e:
+            raise ValueError(
+                f"Identity Provider returned error {e.response.status_code} for {discovery_url}. "
+                "Please verify the issuer URL is correct."
+            )
 
     @property
     def authorization_endpoint(self) -> str | None:

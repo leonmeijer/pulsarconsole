@@ -69,6 +69,20 @@ class User(BaseModel):
         nullable=True,
     )
 
+    # UI Preferences
+    theme_preference: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        default="current-dark",
+        doc="User's preferred theme (e.g., 'current-dark', 'slate-light', 'spireflow-obsidian')",
+    )
+    theme_mode: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        default="system",
+        doc="Theme mode preference: 'light', 'dark', or 'system'",
+    )
+
     # Relationships
     sessions: Mapped[list["Session"]] = relationship(
         "Session",

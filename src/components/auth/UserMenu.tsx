@@ -104,9 +104,9 @@ export default function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-popover border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 glass">
           {/* User Info */}
-          <div className="p-4 border-b border-zinc-700 bg-zinc-800">
+          <div className="p-4 border-b border-white/10 bg-white/5">
             <div className="flex items-center gap-3">
               {user?.avatar_url ? (
                 <img
@@ -120,13 +120,13 @@ export default function UserMenu() {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">
+                <p className="font-medium truncate text-popover-foreground">
                   {user?.display_name || 'User'}
                 </p>
                 <p className="text-sm text-muted-foreground truncate">
                   {user?.email}
                 </p>
-                {user?.roles?.some((role) => role.name === 'superuser') && (
+                {(user?.is_global_admin || user?.roles?.some((role) => role.name === 'superuser')) && (
                   <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
                     <Shield size={10} />
                     Superuser
@@ -141,7 +141,7 @@ export default function UserMenu() {
             <Link
               to="/settings/profile"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-zinc-800 transition-colors"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-white/5 transition-colors"
             >
               <Settings size={18} className="text-muted-foreground" />
               <span>Settings</span>
@@ -149,7 +149,7 @@ export default function UserMenu() {
             <Link
               to="/settings/tokens"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-zinc-800 transition-colors"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-white/5 transition-colors"
             >
               <Key size={18} className="text-muted-foreground" />
               <span>API Tokens</span>
@@ -157,18 +157,18 @@ export default function UserMenu() {
             <Link
               to="/settings/sessions"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-zinc-800 transition-colors"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-white/5 transition-colors"
             >
               <FileKey size={18} className="text-muted-foreground" />
               <span>Sessions</span>
             </Link>
             {user?.roles?.some((role) => role.name === 'superuser') && (
               <>
-                <div className="h-px bg-zinc-700 my-2" />
+                <div className="h-px bg-white/10 my-2" />
                 <Link
                   to="/settings/users"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-zinc-800 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-white/5 transition-colors"
                 >
                   <Users size={18} className="text-muted-foreground" />
                   <span>User Management</span>
@@ -176,7 +176,7 @@ export default function UserMenu() {
                 <Link
                   to="/settings/roles"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-zinc-800 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-white/5 transition-colors"
                 >
                   <Shield size={18} className="text-muted-foreground" />
                   <span>Roles & Permissions</span>
@@ -186,7 +186,7 @@ export default function UserMenu() {
           </div>
 
           {/* Logout */}
-          <div className="border-t border-zinc-700">
+          <div className="border-t border-white/10">
             <button
               onClick={handleLogout}
               className="flex items-center gap-3 w-full px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"

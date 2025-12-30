@@ -65,8 +65,9 @@ Unlike the basic Pulsar Manager, Pulsar Console offers a modern dark-themed UI, 
 |---------|-------------|
 | **Favorites** | Quick access to frequently used resources |
 | **Notifications** | Automatic alerts for consumer disconnects, broker issues, storage warnings |
-| **Dark Theme** | Modern, eye-friendly dark interface |
+| **Multiple Themes** | 8+ modern themes (Pulsar, Slate, Midnight, Obsidian, etc.) |
 | **Responsive Design** | Works on desktop and tablet |
+| **Authentication Guide** | Interactive guide for configuring Pulsar authentication |
 
 ## Screenshots
 
@@ -74,6 +75,32 @@ Unlike the basic Pulsar Manager, Pulsar Console offers a modern dark-themed UI, 
 Real-time cluster overview with health status, message throughput, and resource usage.
 
 ![Dashboard](docs/screenshots/dashboard.png)
+
+### Pulsar Authentication
+Comprehensive management of Pulsar authentication and authorization.
+
+| Status Dashboard | Configuration Guide |
+|-----------------|---------------------|
+| ![Auth Status](docs/screenshots/auth-status.png) | ![Auth Guide](docs/screenshots/auth-guide.png) |
+
+### Available Themes
+Pulsar Console comes with a variety of modern themes to suit your preference.
+
+| Pulsar Dark (Default) | Pulsar Light |
+|-----------------------|--------------|
+| ![Pulsar Dark](docs/screenshots/theme-pulsar-dark.png) | ![Pulsar Light](docs/screenshots/theme-pulsar-light.png) |
+
+| Slate Dark | Slate Light |
+|------------|-------------|
+| ![Slate Dark](docs/screenshots/theme-slate-dark.png) | ![Slate Light](docs/screenshots/theme-slate-light.png) |
+
+| Midnight | Obsidian |
+|----------|----------|
+| ![Midnight](docs/screenshots/theme-midnight.png) | ![Obsidian](docs/screenshots/theme-obsidian.png) |
+
+| Charcoal | Snowlight |
+|----------|-----------|
+| ![Charcoal](docs/screenshots/theme-charcoal.png) | ![Snowlight](docs/screenshots/theme-snowlight.png) |
 
 ### Topic Detail
 Detailed topic view with statistics, subscriptions, and message browser.

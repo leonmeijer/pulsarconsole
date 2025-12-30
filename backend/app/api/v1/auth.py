@@ -111,6 +111,20 @@ class SessionsResponse(BaseModel):
     sessions: list[SessionInfo]
 
 
+class ThemePreferenceRequest(BaseModel):
+    """Theme preference update request."""
+
+    theme: str | None = None  # e.g., 'current-dark', 'slate-light'
+    mode: str | None = None   # 'light', 'dark', or 'system'
+
+
+class ThemePreferenceResponse(BaseModel):
+    """Theme preference response."""
+
+    theme: str | None
+    mode: str | None
+
+
 # =============================================================================
 # State Management (in production, use Redis)
 # =============================================================================
@@ -210,12 +224,19 @@ async def initiate_login(
     nonce = generate_token(32)
 
     # Get authorization URL (includes PKCE challenge if enabled)
-    authorization_url, pkce_challenge = await auth_service.get_authorization_url(
-        oidc_config=oidc_config,
-        redirect_uri=login_request.redirect_uri,
-        state=state,
-        nonce=nonce,
-    )
+    try:
+        authorization_url, pkce_challenge = await auth_service.get_authorization_url(
+            oidc_config=oidc_config,
+            redirect_uri=login_request.redirect_uri,
+            state=state,
+            nonce=nonce,
+        )
+    except ValueError as e:
+        # Connection errors to Identity Provider
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
 
     # Store state for verification (including PKCE code_verifier if used)
     _oauth_states[state] = {
@@ -488,6 +509,81 @@ async def revoke_session(
     await session_service.revoke_session(session_id)
 
     return {"message": "Session revoked successfully"}
+
+
+@router.get("/preferences/theme", response_model=ThemePreferenceResponse)
+async def get_theme_preference(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ThemePreferenceResponse:
+    """Get current user's theme preference."""
+    token = _extract_token(request)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    auth_service = AuthService(db)
+    user = await auth_service.validate_access_token(token)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    return ThemePreferenceResponse(
+        theme=user.theme_preference,
+        mode=user.theme_mode,
+    )
+
+
+@router.put("/preferences/theme", response_model=ThemePreferenceResponse)
+async def update_theme_preference(
+    request: Request,
+    theme_request: ThemePreferenceRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ThemePreferenceResponse:
+    """Update current user's theme preference."""
+    from app.repositories.user import UserRepository
+
+    token = _extract_token(request)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    auth_service = AuthService(db)
+    user = await auth_service.validate_access_token(token)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    # Update user preferences
+    user_repo = UserRepository(db)
+    
+    update_data = {}
+    if theme_request.theme is not None:
+        update_data["theme_preference"] = theme_request.theme
+    if theme_request.mode is not None:
+        update_data["mode"] = theme_request.mode
+    
+    if update_data:
+        # Direct update via repository
+        user.theme_preference = theme_request.theme if theme_request.theme is not None else user.theme_preference
+        user.theme_mode = theme_request.mode if theme_request.mode is not None else user.theme_mode
+        await db.commit()
+        await db.refresh(user)
+
+    return ThemePreferenceResponse(
+        theme=user.theme_preference,
+        mode=user.theme_mode,
+    )
 
 
 # =============================================================================

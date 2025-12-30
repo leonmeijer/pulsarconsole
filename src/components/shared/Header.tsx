@@ -4,6 +4,7 @@ import { useEnvironments, useActivateEnvironment, usePendingUsersCount } from "@
 import { toast } from "sonner";
 import NotificationDropdown from "./NotificationDropdown";
 import GlobalSearch from "./GlobalSearch";
+import ThemeSwitch from "./ThemeSwitch";
 import { UserMenu } from "@/components/auth";
 import { useAuth } from "@/context/AuthContext";
 
@@ -92,6 +93,8 @@ export default function Header() {
                         </span>
                     </Link>
                 )}
+
+                <ThemeSwitch />
 
                 <NotificationDropdown />
 

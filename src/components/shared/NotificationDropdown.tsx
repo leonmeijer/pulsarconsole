@@ -69,8 +69,8 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
 
     return (
         <div
-            className={`p-3 border-b border-zinc-700 hover:bg-zinc-800 transition-colors ${
-                !notification.is_read ? "bg-zinc-800/50" : ""
+            className={`p-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
+                !notification.is_read ? "bg-white/5" : ""
             }`}
         >
             <div className="flex items-start gap-3">
@@ -97,7 +97,7 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
                                         e.stopPropagation();
                                         onMarkRead(notification.id);
                                     }}
-                                    className="p-1 hover:bg-zinc-700 rounded transition-colors"
+                                    className="p-1 hover:bg-white/10 rounded transition-colors"
                                     title="Mark as read"
                                 >
                                     <Check className="w-3.5 h-3.5 text-muted-foreground" />
@@ -108,7 +108,7 @@ function NotificationItem({ notification, onMarkRead, onDismiss }: NotificationI
                                     e.stopPropagation();
                                     onDismiss(notification.id);
                                 }}
-                                className="p-1 hover:bg-zinc-700 rounded transition-colors"
+                                className="p-1 hover:bg-white/10 rounded transition-colors"
                                 title="Dismiss"
                             >
                                 <X className="w-3.5 h-3.5 text-muted-foreground" />
@@ -175,12 +175,12 @@ export default function NotificationDropdown() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-96 bg-popover border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 glass">
                     {/* Header */}
-                    <div className="p-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-800">
+                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
                         <div className="flex items-center gap-2">
                             <Bell className="w-5 h-5 text-primary" />
-                            <h3 className="font-semibold">Notifications</h3>
+                            <h3 className="font-semibold text-popover-foreground">Notifications</h3>
                             {unreadCount > 0 && (
                                 <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
                                     {unreadCount} new
@@ -221,7 +221,7 @@ export default function NotificationDropdown() {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-3 border-t border-zinc-700 bg-zinc-800">
+                    <div className="p-3 border-t border-white/10 bg-white/5">
                         <Link
                             to="/notifications"
                             onClick={() => setIsOpen(false)}

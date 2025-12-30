@@ -238,6 +238,10 @@ class SeedService:
         # First seed permissions
         await self.seed_permissions()
 
+        if not environments:
+            logger.warning("No environments found. Roles can only be seeded once an environment is created.")
+            return
+
         # Then seed roles for each environment
         for env in environments:
             await self.seed_roles_for_environment(env.id)

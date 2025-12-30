@@ -33,6 +33,7 @@ class AuditService:
         status: str = "success",
     ) -> AuditEvent:
         """Log an audit event."""
+        # 1. Database Storage
         # Build request_params including user info and details
         request_params: dict[str, Any] = {}
         if details:
@@ -54,12 +55,24 @@ class AuditService:
             status=status,
         )
 
+        # 2. Structured JSON Logging (for Elastic/Filebeat)
+        # Using ECS (Elastic Common Schema) inspired fields
+        action_val = action.value if isinstance(action, ActionType) else action
+        res_type_val = resource_type.value if isinstance(resource_type, ResourceType) else resource_type
+        
         logger.info(
-            "Audit event logged",
-            action=action.value if isinstance(action, ActionType) else action,
-            resource_type=resource_type.value if isinstance(resource_type, ResourceType) else resource_type,
+            "audit_event",
+            event_action=action_val,
+            event_provider="pulsar_console",
+            event_dataset="audit",
+            resource_type=res_type_val,
             resource_id=resource_id,
+            user_email=user_email,
             user_id=user_id,
+            status=status,
+            client_ip=ip_address,
+            user_agent=user_agent,
+            details=details,
         )
 
         return event

@@ -23,6 +23,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFavorites, type FavoriteType } from "@/context/FavoritesContext";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 
 const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -63,11 +64,12 @@ export default function Sidebar() {
     const location = useLocation();
     const { favorites, removeFavorite } = useFavorites();
     const { user, authRequired, isAuthenticated } = useAuth();
+    const { resolvedMode } = useTheme();
 
     // Show user settings only when OIDC is enabled and user is authenticated
     const showUserSettings = authRequired && isAuthenticated;
     // Check if user has superuser role (for OIDC mode) or if running without OIDC (dev/superuser mode)
-    const hasSuperuserRole = user?.roles?.some((role) => role.name === 'superuser') ?? false;
+    const hasSuperuserRole = user?.is_global_admin || (user?.roles?.some((role) => role.name === 'superuser') ?? false);
     // Show OIDC admin items (Roles/Users) only when OIDC is enabled AND user is superuser
     const showOidcAdminItems = authRequired && hasSuperuserRole;
     // Show Pulsar admin items (Pulsar Auth) for superusers OR when OIDC is disabled (dev mode)
@@ -83,13 +85,20 @@ export default function Sidebar() {
         >
             <div className="p-6 flex items-center justify-between">
                 {!isCollapsed && (
-                    <motion.h1
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
-                    >
-                        PULSAR MGMT
-                    </motion.h1>
+                    <Link to="/" className="flex items-center gap-2 outline-none">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex items-center gap-2"
+                        >
+                            <img 
+                                src="/logo.png" 
+                                alt="Pulsar Console" 
+                                className="h-20 w-auto -mt-2.5 -ml-2.5 hover:opacity-80 transition-opacity"
+                                style={resolvedMode === 'dark' ? { filter: 'brightness(0) invert(1)' } : undefined}
+                            />
+                        </motion.div>
+                    </Link>
                 )}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}

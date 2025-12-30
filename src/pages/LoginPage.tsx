@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogIn, Shield, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { LogIn, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -194,30 +194,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-white/10 text-center">
-            <p className="text-xs text-muted-foreground">
-              Protected by Pulsar Console Authentication
-            </p>
-            {providers.length > 0 && (
-              <a
-                href={providers[0]?.issuer_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                View Identity Provider
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Pulsar Console Branding */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Pulsar Console
-          </p>
         </div>
       </motion.div>
     </div>
