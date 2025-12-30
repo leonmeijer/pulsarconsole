@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Plus, RefreshCcw, Building2, ArrowRight, Trash2, Play, Pause, Star } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useTenants, useCreateTenant, useDeleteTenant } from "@/api/hooks";
@@ -15,6 +15,16 @@ export default function TenantsPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [newTenantName, setNewTenantName] = useState("");
     const { isFavorite, toggleFavorite } = useFavorites();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (showCreate) {
+            const timer = setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [showCreate]);
 
     const handleCreate = async () => {
         if (!newTenantName.trim()) {
@@ -90,9 +100,14 @@ export default function TenantsPage() {
                     <h3 className="text-lg font-semibold mb-4">Create New Tenant</h3>
                     <div className="flex gap-4">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={newTenantName}
                             onChange={(e) => setNewTenantName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleCreate();
+                                if (e.key === 'Escape') setShowCreate(false);
+                            }}
                             placeholder="Tenant name"
                             className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
                         />

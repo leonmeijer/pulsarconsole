@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, CheckCircle, XCircle, Loader2, Wifi, Plus, Pencil, Trash2, Globe, Power, Eye, EyeOff, Upload } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
     useEnvironments,
@@ -32,6 +33,7 @@ const emptyForm: EnvironmentFormData = {
 
 export default function EnvironmentPage() {
     const { data: environments, isLoading } = useEnvironments();
+    const [searchParams, setSearchParams] = useSearchParams();
     const createEnvironment = useCreateEnvironment();
     const updateEnvironment = useUpdateEnvironment();
     const deleteEnvironment = useDeleteEnvironment();
@@ -49,6 +51,19 @@ export default function EnvironmentPage() {
         message: string;
         latency_ms?: number;
     } | null>(null);
+
+    // Auto-open edit form if requested via URL
+    useEffect(() => {
+        if (!isLoading && environments && searchParams.get('edit') === 'true') {
+            const activeEnv = environments.find(e => e.is_active);
+            if (activeEnv) {
+                openEditForm(activeEnv);
+                // Clear the param after opening
+                searchParams.delete('edit');
+                setSearchParams(searchParams, { replace: true });
+            }
+        }
+    }, [isLoading, environments, searchParams]);
 
     const resetForm = () => {
         setFormData(emptyForm);

@@ -14,6 +14,7 @@ interface MetricCardProps {
     className?: string;
     variant?: "default" | "success" | "warning" | "danger";
     loading?: boolean;
+    onClick?: () => void;
 }
 
 const variantColors = {
@@ -39,6 +40,7 @@ export default function MetricCard({
     className,
     variant = "default",
     loading = false,
+    onClick,
 }: MetricCardProps) {
     const TrendIcon = trend?.direction === "up"
         ? TrendingUp
@@ -66,8 +68,10 @@ export default function MetricCard({
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            onClick={onClick}
             className={cn(
-                "glass p-6 rounded-2xl relative overflow-hidden group hover:border-primary/50 transition-all duration-300",
+                "glass p-6 rounded-2xl relative overflow-hidden group transition-all duration-300",
+                onClick ? "cursor-pointer hover:border-primary/50 hover:bg-white/5 active:scale-[0.98]" : "",
                 className
             )}
         >

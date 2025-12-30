@@ -1,21 +1,36 @@
 import { motion } from "framer-motion";
 import { Plus, RefreshCcw, MessageSquare, ArrowRight, Trash2, ArrowLeft, Star } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useTopics, useCreateTopic, useDeleteTopic } from "@/api/hooks";
+import { useTopics, useCreateTopic, useDeleteTopic, useDeleteNamespace } from "@/api/hooks";
 import { useFavorites } from "@/context/FavoritesContext";
 import { PermissionGate } from "@/components/auth";
+import { ConfirmDialog } from "@/components/shared";
 
 export default function TopicsPage() {
     const { tenant, namespace } = useParams<{ tenant: string; namespace: string }>();
+    const navigate = useNavigate();
     const { data: topics, isLoading, refetch } = useTopics(tenant!, namespace!);
     const createTopic = useCreateTopic(tenant!, namespace!);
     const deleteTopic = useDeleteTopic(tenant!, namespace!);
+    const deleteNamespace = useDeleteNamespace(tenant!);
     const [showCreate, setShowCreate] = useState(false);
+    const [showDeleteNamespaceConfirm, setShowDeleteNamespaceConfirm] = useState(false);
     const [newTopicName, setNewTopicName] = useState("");
     const [partitions, setPartitions] = useState(0);
     const { isFavorite, toggleFavorite } = useFavorites();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (showCreate) {
+            // Use a small delay to ensure the animation/render is complete
+            const timer = setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [showCreate]);
 
     const handleCreate = async () => {
         if (!newTopicName.trim()) {
@@ -44,6 +59,16 @@ export default function TopicsPage() {
             toast.success(`Topic '${name}' deleted`);
         } catch (error) {
             toast.error("Failed to delete topic. It may have active subscriptions.");
+        }
+    };
+
+    const handleDeleteNamespace = async () => {
+        try {
+            await deleteNamespace.mutateAsync(namespace!);
+            toast.success(`Namespace '${namespace}' deleted`);
+            navigate(`/tenants/${tenant}/namespaces`);
+        } catch (error) {
+            toast.error("Failed to delete namespace. It may have topics.");
         }
     };
 
@@ -86,6 +111,15 @@ export default function TopicsPage() {
                     >
                         <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
                     </button>
+                    <PermissionGate action="write" resourceLevel="namespace" resourcePath={`${tenant}/${namespace}`}>
+                        <button
+                            onClick={() => setShowDeleteNamespaceConfirm(true)}
+                            className="flex items-center gap-2 px-4 py-3 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all active:scale-95"
+                        >
+                            <Trash2 size={18} />
+                            Delete
+                        </button>
+                    </PermissionGate>
                     <PermissionGate action="write" resourceLevel="topic" resourcePath={`${tenant}/${namespace}`}>
                         <button
                             onClick={() => setShowCreate(true)}
@@ -98,6 +132,16 @@ export default function TopicsPage() {
                 </div>
             </div>
 
+            <ConfirmDialog
+                open={showDeleteNamespaceConfirm}
+                onOpenChange={setShowDeleteNamespaceConfirm}
+                title="Delete Namespace"
+                description={`Are you sure you want to delete namespace "${namespace}"? This action cannot be undone and all topics within the namespace will be lost.`}
+                confirmLabel="Delete"
+                variant="danger"
+                onConfirm={handleDeleteNamespace}
+            />
+
             {showCreate && (
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -109,9 +153,14 @@ export default function TopicsPage() {
                         <div className="flex-1 min-w-[200px] space-y-1.5">
                             <label className="text-sm font-medium text-muted-foreground ml-1">Topic Name</label>
                             <input
+                                ref={inputRef}
                                 type="text"
                                 value={newTopicName}
                                 onChange={(e) => setNewTopicName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleCreate();
+                                    if (e.key === 'Escape') setShowCreate(false);
+                                }}
                                 placeholder="e.g. my-awesome-topic"
                                 className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
                             />

@@ -511,6 +511,41 @@ async def revoke_session(
     return {"message": "Session revoked successfully"}
 
 
+@router.delete("/sessions")
+async def revoke_all_other_sessions(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Revoke all sessions for the current user except the current one."""
+    from app.services.session import SessionService
+
+    token = _extract_token(request)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    auth_service = AuthService(db)
+    user = await auth_service.validate_access_token(token)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    session_service = SessionService(db)
+    current_token_hash = hash_value(token)
+    
+    count = await session_service.revoke_other_user_sessions(user.id, current_token_hash)
+
+    return {
+        "message": f"Successfully revoked {count} other sessions",
+        "revoked_count": count
+    }
+
+
 @router.get("/preferences/theme", response_model=ThemePreferenceResponse)
 async def get_theme_preference(
     request: Request,

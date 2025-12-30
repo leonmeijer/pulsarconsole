@@ -72,6 +72,21 @@ class SessionService:
         await self.db.commit()
         return count
 
+    async def revoke_other_user_sessions(self, user_id: UUID, current_token_hash: str) -> int:
+        """
+        Revoke all sessions for a user except the current one.
+
+        Args:
+            user_id: The user ID
+            current_token_hash: Hash of the current access token
+
+        Returns:
+            Number of sessions revoked
+        """
+        count = await self.session_repo.revoke_others_for_user(user_id, current_token_hash)
+        await self.db.commit()
+        return count
+
     async def cleanup_expired_sessions(self) -> int:
         """
         Remove all expired sessions from the database.

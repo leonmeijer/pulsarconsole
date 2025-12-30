@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
     Activity,
     Building2,
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 export default function DashboardPage() {
+    const navigate = useNavigate();
     const {
         isAutoRefreshEnabled,
         toggleAutoRefresh,
@@ -274,7 +275,11 @@ export default function DashboardPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={cn("glass p-4 rounded-2xl flex items-center gap-4", healthBgColor)}
+                    onClick={() => navigate("/environment?edit=true")}
+                    className={cn(
+                        "glass p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:border-primary/50 hover:bg-white/5 active:scale-[0.99] transition-all",
+                        healthBgColor
+                    )}
                 >
                     <div className={cn("p-3 rounded-xl", healthBgColor)}>
                         <HealthIcon className={cn("w-6 h-6", healthColor)} />
@@ -347,6 +352,7 @@ export default function DashboardPage() {
                     subtitle={`${stats?.namespaces || 0} namespaces`}
                     icon={Building2}
                     loading={statsLoading}
+                    onClick={() => navigate("/tenants")}
                 />
                 <MetricCard
                     title="Topics"

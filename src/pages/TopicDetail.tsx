@@ -17,16 +17,18 @@ import {
     Layers,
     Settings,
     Star,
-    Info
+    Info,
+    Trash2
 } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useTopic, useSubscriptions, useBrowseMessages } from "@/api/hooks";
+import { useTopic, useSubscriptions, useBrowseMessages, useDeleteTopic } from "@/api/hooks";
 import type { Message, MessagePayload } from "@/api/types";
 import { cn } from "@/lib/utils";
-import { TopicPartitionEditor } from "@/components/shared";
+import { TopicPartitionEditor, ConfirmDialog } from "@/components/shared";
 import { useFavorites } from "@/context/FavoritesContext";
+import { PermissionGate } from "@/components/auth";
 
 function formatRate(rate: number): string {
     if (rate >= 1000000) return `${(rate / 1000000).toFixed(1)}M/s`;
@@ -302,12 +304,26 @@ function MessageBrowser({
 
 export default function TopicDetailPage() {
     const { tenant, namespace, topic } = useParams<{ tenant: string; namespace: string; topic: string }>();
+    const navigate = useNavigate();
     const { data: topicData, isLoading: topicLoading, refetch: refetchTopic } = useTopic(tenant!, namespace!, topic!);
     const { data: subscriptions, isLoading: subsLoading, refetch: refetchSubs } = useSubscriptions(tenant!, namespace!, topic!);
+    const deleteTopic = useDeleteTopic(tenant!, namespace!);
+    
     const [showPartitionEditor, setShowPartitionEditor] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { isFavorite, toggleFavorite } = useFavorites();
 
     const isLoading = topicLoading || subsLoading;
+
+    const handleDelete = async () => {
+        try {
+            await deleteTopic.mutateAsync({ topic: topic! });
+            toast.success(`Topic '${topic}' deleted`);
+            navigate(`/tenants/${tenant}/namespaces/${namespace}/topics`);
+        } catch (error) {
+            toast.error("Failed to delete topic. It may have active subscriptions.");
+        }
+    };
 
     return (
         <div className="space-y-8">
@@ -332,12 +348,23 @@ export default function TopicDetailPage() {
                     <h1 className="text-3xl font-bold">{topic}</h1>
                     <p className="text-muted-foreground mt-1">Topic details, subscriptions, and message browser.</p>
                 </div>
-                <button
-                    onClick={() => { refetchTopic(); refetchSubs(); }}
-                    className="p-3 glass rounded-xl hover:bg-white/10 transition-all active:scale-95"
-                >
-                    <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => { refetchTopic(); refetchSubs(); }}
+                        className="p-3 glass rounded-xl hover:bg-white/10 transition-all active:scale-95"
+                    >
+                        <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
+                    </button>
+                    <PermissionGate action="write" resourceLevel="topic" resourcePath={`${tenant}/${namespace}/${topic}`}>
+                        <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="flex items-center gap-2 px-4 py-3 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all active:scale-95"
+                        >
+                            <Trash2 size={18} />
+                            Delete
+                        </button>
+                    </PermissionGate>
+                </div>
             </div>
 
             {topicLoading ? (
@@ -632,6 +659,17 @@ export default function TopicDetailPage() {
                         topic={topic!}
                         currentPartitions={topicData.partitions || 0}
                         onSuccess={() => refetchTopic()}
+                    />
+
+                    {/* Delete Confirmation Dialog */}
+                    <ConfirmDialog
+                        open={showDeleteConfirm}
+                        onOpenChange={setShowDeleteConfirm}
+                        title="Delete Topic"
+                        description={`Are you sure you want to delete topic "${topic}"? This action cannot be undone and all data in the topic will be permanently lost.`}
+                        confirmLabel="Delete"
+                        variant="danger"
+                        onConfirm={handleDelete}
                     />
                 </>
             )}

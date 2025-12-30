@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Plus, RefreshCcw, FolderOpen, ArrowRight, Trash2, ArrowLeft, Settings, Clock, Shield, Star } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useNamespaces, useCreateNamespace, useDeleteNamespace } from "@/api/hooks";
@@ -18,6 +18,16 @@ export default function NamespacesPage() {
     const [newNamespaceName, setNewNamespaceName] = useState("");
     const [editingNamespace, setEditingNamespace] = useState<Namespace | null>(null);
     const { isFavorite, toggleFavorite } = useFavorites();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (showCreate) {
+            const timer = setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [showCreate]);
 
     const handleCreate = async () => {
         if (!newNamespaceName.trim()) {
@@ -114,9 +124,14 @@ export default function NamespacesPage() {
                     <h3 className="text-lg font-semibold mb-4">Create New Namespace</h3>
                     <div className="flex gap-4">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={newNamespaceName}
                             onChange={(e) => setNewNamespaceName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleCreate();
+                                if (e.key === 'Escape') setShowCreate(false);
+                            }}
                             placeholder="Namespace name"
                             className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
                         />

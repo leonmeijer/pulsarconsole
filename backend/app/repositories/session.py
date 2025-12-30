@@ -75,6 +75,23 @@ class SessionRepository(BaseRepository[Session]):
         await self.session.flush()
         return len(sessions)
 
+    async def revoke_others_for_user(self, user_id: UUID, current_token_hash: str) -> int:
+        """Revoke all sessions for a user except the current one. Returns count of revoked sessions."""
+        result = await self.session.execute(
+            select(Session).where(
+                Session.user_id == user_id,
+                Session.is_revoked == False,
+                Session.access_token_hash != current_token_hash
+            )
+        )
+        sessions = list(result.scalars().all())
+
+        for sess in sessions:
+            sess.is_revoked = True
+
+        await self.session.flush()
+        return len(sessions)
+
     async def cleanup_expired(self) -> int:
         """Delete expired sessions. Returns count of deleted sessions."""
         now = datetime.now(timezone.utc)
