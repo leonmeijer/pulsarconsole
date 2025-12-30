@@ -21,7 +21,7 @@ import {
     Lightbulb,
     X,
 } from "lucide-react";
-import { useDashboardStats, useHealthStatus, useTopTenants, useBrokers, queryKeys } from "@/api/hooks";
+import { useDashboardStats, useHealthStatus, useTopTenants, useBrokers, useEnvironment, queryKeys } from "@/api/hooks";
 import { MetricCard, ChartContainer, TimeSeriesChart, SimpleBarChart } from "@/components/shared";
 import { useAutoRefresh, formatLastRefresh } from "@/hooks/useAutoRefresh";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,7 @@ export default function DashboardPage() {
     const isPaused = !isAutoRefreshEnabled;
     const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats({ paused: isPaused });
     const { data: health, isLoading: healthLoading } = useHealthStatus();
+    const { data: activeEnv } = useEnvironment();
     const { data: topTenants, isLoading: tenantsLoading } = useTopTenants(5);
     const { data: brokers, isLoading: brokersLoading } = useBrokers({ paused: isPaused });
 
@@ -292,6 +293,11 @@ export default function DashboardPage() {
                             <span className={health?.pulsar_connection ? "text-green-500" : "text-red-500"}>
                                 Pulsar: {health?.pulsar_connection ? "Connected" : "Disconnected"}
                             </span>
+                            {activeEnv && (
+                                <span>
+                                    Auth: <span className="capitalize">{activeEnv.auth_mode}</span>
+                                </span>
+                            )}
                             <span className={health?.database_connection ? "text-green-500" : "text-red-500"}>
                                 Database: {health?.database_connection ? "OK" : "Error"}
                             </span>
