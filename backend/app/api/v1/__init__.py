@@ -17,11 +17,13 @@ from app.api.v1 import (
     tenants,
     tokens,
     topics,
+    ws,
 )
 
 router = APIRouter()
 
 # Include all routers
+router.include_router(ws.router)  # WebSocket endpoint
 router.include_router(auth.router)  # Auth endpoints first
 router.include_router(tokens.router)  # Token management
 router.include_router(rbac.router)  # RBAC endpoints

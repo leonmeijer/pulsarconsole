@@ -14,6 +14,7 @@ import AuditLogsPage from "./pages/AuditLogs";
 import NotificationsPage from "./pages/Notifications";
 import LoginPage from "./pages/LoginPage";
 import { TokensPage, RolesPage, UsersPage, SessionsPage, PulsarAuthPage } from "./pages/settings";
+import { useRealtimeSync } from "./hooks/useRealtimeSync";
 
 const router = createBrowserRouter([
   {
@@ -106,5 +107,6 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
+  useRealtimeSync();
   return <RouterProvider router={router} />;
 }

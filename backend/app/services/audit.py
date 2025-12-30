@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
+from app.core.events import event_bus
 from app.models.audit import ActionType, AuditEvent, ResourceType
 from app.repositories.audit import AuditRepository
 
@@ -74,6 +75,9 @@ class AuditService:
             user_agent=user_agent,
             details=details,
         )
+
+        # 3. WebSocket Event
+        await event_bus.publish("AUDIT_LOGS_UPDATED")
 
         return event
 

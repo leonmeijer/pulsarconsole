@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from app.config import settings
 from app.core.database import async_session_factory
 from app.core.logging import get_logger
+from app.core.events import event_bus
 from app.models.stats import BrokerStats, SubscriptionStats, TopicStats
 from app.repositories.environment import EnvironmentRepository
 from app.repositories.stats import (
@@ -112,6 +113,12 @@ async def _collect_topic_stats_async():
                 repo = TopicStatsRepository(session)
                 await repo.batch_insert(all_stats)
                 collected = len(all_stats)
+        
+        # Trigger real-time UI refresh for stats and lists
+        # This ensures changes made outside the console are eventually reflected
+        await event_bus.publish("TOPICS_UPDATED")
+        await event_bus.publish("NAMESPACES_UPDATED")
+        await event_bus.publish("TENANTS_UPDATED")
 
     finally:
         await client.close()
@@ -229,6 +236,9 @@ async def _collect_broker_stats_async():
                 repo = BrokerStatsRepository(session)
                 await repo.batch_insert(all_stats)
                 collected = len(all_stats)
+        
+        # Trigger UI refresh for brokers
+        await event_bus.publish("BROKERS_UPDATED")
 
     finally:
         await client.close()

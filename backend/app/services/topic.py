@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DependencyError, NotFoundError, ValidationError
 from app.core.logging import get_logger
+from app.core.events import event_bus
 from app.repositories.stats import TopicStatsRepository
 from app.services.cache import CacheService
 from app.services.pulsar_admin import PulsarAdminService
@@ -217,6 +218,9 @@ class TopicService:
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_topics(env_id, tenant, namespace)
 
+        # Publish event
+        await event_bus.publish("TOPICS_UPDATED", {"tenant": tenant, "namespace": namespace, "topic": topic, "action": "create"})
+
         logger.info(
             "Topic created",
             tenant=tenant,
@@ -268,6 +272,9 @@ class TopicService:
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_topics(env_id, tenant, namespace)
         await self.cache.invalidate_topic(env_id, full_name)
+
+        # Publish event
+        await event_bus.publish("TOPICS_UPDATED", {"tenant": tenant, "namespace": namespace, "topic": topic, "action": "delete"})
 
         logger.info(
             "Topic deleted",

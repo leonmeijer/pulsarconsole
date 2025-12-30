@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DependencyError, NotFoundError, ValidationError
 from app.core.logging import get_logger
+from app.core.events import event_bus
 from app.repositories.stats import AggregationRepository
 from app.services.cache import CacheService
 from app.services.pulsar_admin import PulsarAdminService
@@ -163,6 +164,9 @@ class NamespaceService:
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_namespaces(env_id, tenant)
 
+        # Publish event
+        await event_bus.publish("NAMESPACES_UPDATED", {"tenant": tenant, "namespace": namespace, "action": "create"})
+
         logger.info("Namespace created", tenant=tenant, namespace=namespace)
 
         return {
@@ -215,6 +219,9 @@ class NamespaceService:
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_namespaces(env_id, tenant)
 
+        # Publish event
+        await event_bus.publish("NAMESPACES_UPDATED", {"tenant": tenant, "namespace": namespace, "action": "update"})
+
         logger.info("Namespace policies updated", tenant=tenant, namespace=namespace)
 
         return await self.get_namespace(tenant, namespace)
@@ -241,5 +248,8 @@ class NamespaceService:
         # Invalidate cache
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_namespace(env_id, tenant, namespace)
+
+        # Publish event
+        await event_bus.publish("NAMESPACES_UPDATED", {"tenant": tenant, "namespace": namespace, "action": "delete"})
 
         logger.info("Namespace deleted", tenant=tenant, namespace=namespace)

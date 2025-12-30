@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DependencyError, NotFoundError, ValidationError
 from app.core.logging import get_logger
+from app.core.events import event_bus
 from app.repositories.stats import AggregationRepository
 from app.services.cache import CacheService
 from app.services.pulsar_admin import PulsarAdminService
@@ -178,6 +179,9 @@ class TenantService:
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_tenants(env_id)
 
+        # Publish event
+        await event_bus.publish("TENANTS_UPDATED", {"tenant": name, "action": "create"})
+
         logger.info("Tenant created", tenant=name)
 
         return {
@@ -210,6 +214,9 @@ class TenantService:
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_tenants(env_id)
 
+        # Publish event
+        await event_bus.publish("TENANTS_UPDATED", {"tenant": name, "action": "update"})
+
         logger.info("Tenant updated", tenant=name)
 
         return await self.get_tenant(name)
@@ -235,5 +242,8 @@ class TenantService:
         # Invalidate cache
         env_id = self.pulsar.environment_id or "default"
         await self.cache.invalidate_tenant(env_id, name)
+
+        # Publish event
+        await event_bus.publish("TENANTS_UPDATED", {"tenant": name, "action": "delete"})
 
         logger.info("Tenant deleted", tenant=name)

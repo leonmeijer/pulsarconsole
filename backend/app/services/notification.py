@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
+from app.core.events import event_bus
 from app.models.notification import Notification, NotificationType, NotificationSeverity
 from app.repositories.notification import NotificationRepository
 from app.services.pulsar_admin import PulsarAdminService
@@ -124,6 +125,9 @@ class NotificationService:
             severity=severity_str,
             title=title,
         )
+
+        # Publish event
+        await event_bus.publish("NOTIFICATIONS_UPDATED")
 
         return notification
 
