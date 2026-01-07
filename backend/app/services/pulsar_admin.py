@@ -733,12 +733,13 @@ class PulsarAdminService:
     # Broker operations
     # -------------------------------------------------------------------------
 
-    async def get_brokers(self, cluster: str = "standalone") -> list[str]:
+    async def get_brokers(self, cluster: str | None = None) -> list[str]:
         """Get active brokers."""
+        cluster = cluster or settings.pulsar_cluster
         response = await self._request("GET", f"/admin/v2/brokers/{cluster}")
         return self._handle_response(response, "brokers")
 
-    async def get_active_brokers(self, cluster: str = "standalone") -> list[str]:
+    async def get_active_brokers(self, cluster: str | None = None) -> list[str]:
         """Alias for get_brokers for backwards compatibility."""
         return await self.get_brokers(cluster)
 

@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     pulsar_admin_url: str = Field(default="http://localhost:8080")
     pulsar_service_url: str = Field(default="pulsar://localhost:6650")
+    pulsar_cluster: str = Field(default="standalone")
     pulsar_auth_token: str | None = Field(default=None)
     pulsar_tls_enabled: bool = Field(default=False)
     pulsar_tls_allow_insecure: bool = Field(default=True)
