@@ -1,5 +1,6 @@
 """Topic service for managing Pulsar topics."""
 
+import asyncio
 import re
 from typing import Any
 
@@ -72,6 +73,67 @@ class TopicService:
             }
         return {"name": full_name, "persistent": True}
 
+    async def _fetch_topic_stats(self, full_name: str) -> dict[str, Any]:
+        """Fetch stats for a single topic with error handling.
+
+        Returns a dict with full_name and stats, or empty stats on failure.
+        """
+        try:
+            live_stats = await self.pulsar.get_topic_stats(full_name)
+            return {
+                "full_name": full_name,
+                "producer_count": len(live_stats.get("publishers", [])),
+                "subscription_count": len(live_stats.get("subscriptions", {})),
+            }
+        except Exception as e:
+            logger.debug(
+                "Failed to fetch stats for topic",
+                topic=full_name,
+                error=str(e),
+            )
+            return {
+                "full_name": full_name,
+                "producer_count": 0,
+                "subscription_count": 0,
+            }
+
+    async def _fetch_topic_stats_batch(
+        self,
+        topic_names: list[str],
+        batch_size: int = 50,
+    ) -> dict[str, dict[str, Any]]:
+        """Fetch stats for multiple topics in parallel batches.
+
+        Args:
+            topic_names: List of full topic names to fetch stats for.
+            batch_size: Maximum number of concurrent requests per batch.
+
+        Returns:
+            Dict mapping full_name to stats dict.
+        """
+        all_stats: dict[str, dict[str, Any]] = {}
+
+        # Process in batches to avoid overwhelming the Pulsar API
+        for i in range(0, len(topic_names), batch_size):
+            batch = topic_names[i:i + batch_size]
+
+            # Fetch all stats in this batch concurrently
+            tasks = [self._fetch_topic_stats(name) for name in batch]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for result in results:
+                if isinstance(result, Exception):
+                    # This shouldn't happen since _fetch_topic_stats handles exceptions,
+                    # but handle it defensively
+                    logger.warning(
+                        "Unexpected error in batch stats fetch",
+                        error=str(result),
+                    )
+                    continue
+                all_stats[result["full_name"]] = result
+
+        return all_stats
+
     async def get_topics(
         self,
         tenant: str,
@@ -90,20 +152,18 @@ class TopicService:
         # Fetch from Pulsar
         topic_names = await self.pulsar.get_topics(tenant, namespace, persistent)
 
+        # Fetch all topic stats in parallel batches
+        stats_map = await self._fetch_topic_stats_batch(topic_names)
+
         topics = []
         for full_name in topic_names:
             parsed = self.parse_topic_name(full_name)
             topic_name = parsed.get("name", full_name)
 
-            # Fetch live stats from Pulsar for producer/subscription counts
-            producer_count = 0
-            subscription_count = 0
-            try:
-                live_stats = await self.pulsar.get_topic_stats(full_name)
-                producer_count = len(live_stats.get("publishers", []))
-                subscription_count = len(live_stats.get("subscriptions", {}))
-            except Exception:
-                pass  # Use defaults if live fetch fails
+            # Get live stats from pre-fetched map
+            live_stats = stats_map.get(full_name, {})
+            producer_count = live_stats.get("producer_count", 0)
+            subscription_count = live_stats.get("subscription_count", 0)
 
             # Get cached stats from DB for other metrics
             stats = await self.stats_repo.get_latest_by_topic(

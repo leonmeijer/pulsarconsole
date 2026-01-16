@@ -30,6 +30,7 @@ import { useTopic, useSubscriptions, useBrowseMessages, useExamineMessages, useD
 import { useAutoRefresh, formatLastRefresh } from "@/hooks/useAutoRefresh";
 import type { Message, MessagePayload } from "@/api/types";
 import { cn } from "@/lib/utils";
+import { formatBytes } from "@/lib/format";
 import { TopicPartitionEditor, ConfirmDialog } from "@/components/shared";
 import { useFavorites } from "@/context/FavoritesContext";
 import { PermissionGate } from "@/components/auth";
@@ -40,12 +41,6 @@ function formatRate(rate: number): string {
     return `${rate.toFixed(1)}/s`;
 }
 
-function formatSize(bytes: number): string {
-    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
-    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${Math.round(bytes)} B`;
-}
 
 function formatTimestamp(timestamp: string): string {
     return new Date(timestamp).toLocaleString();
@@ -71,7 +66,7 @@ function PayloadViewer({ payload }: { payload: MessagePayload }) {
             return (
                 <div className="text-sm">
                     <span className="text-muted-foreground">Binary data</span>
-                    {payload.size && <span className="ml-2">({formatSize(payload.size)})</span>}
+                    {payload.size && <span className="ml-2">({formatBytes(payload.size)})</span>}
                     {payload.raw && (
                         <pre className="mt-2 font-mono text-xs bg-black/20 p-2 rounded overflow-x-auto">
                             {payload.raw.slice(0, 200)}
@@ -96,7 +91,7 @@ function PayloadViewer({ payload }: { payload: MessagePayload }) {
                 </span>
                 {payload.size && (
                     <span className="text-xs text-muted-foreground">
-                        ({formatSize(payload.size)})
+                        ({formatBytes(payload.size)})
                     </span>
                 )}
             </div>
@@ -578,7 +573,7 @@ export default function TopicDetailPage() {
                                 </div>
                                 <div>
                                     <div className="text-sm text-muted-foreground">Storage</div>
-                                    <div className="text-xl font-bold">{formatSize(topicData.stats.storage_size)}</div>
+                                    <div className="text-xl font-bold">{formatBytes(topicData.stats.storage_size)}</div>
                                 </div>
                             </div>
                         </motion.div>
@@ -595,7 +590,7 @@ export default function TopicDetailPage() {
                                 </div>
                                 <div>
                                     <div className="text-sm text-muted-foreground">Backlog Size</div>
-                                    <div className="text-xl font-bold">{formatSize(topicData.stats.backlog_size)}</div>
+                                    <div className="text-xl font-bold">{formatBytes(topicData.stats.backlog_size)}</div>
                                 </div>
                             </div>
                         </motion.div>
@@ -651,7 +646,7 @@ export default function TopicDetailPage() {
                                     Total Size
                                     <Info size={12} className="opacity-50" />
                                 </div>
-                                <div className="font-medium">{formatSize(topicData.internal_stats.total_size)}</div>
+                                <div className="font-medium">{formatBytes(topicData.internal_stats.total_size)}</div>
                                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#1a1a2e] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal w-64 pointer-events-none shadow-xl border border-white/10 z-10">
                                     Total storage size of all entries in the topic across all ledgers in BookKeeper. Includes message payloads, headers, and metadata.
                                 </div>
@@ -671,7 +666,7 @@ export default function TopicDetailPage() {
                                     Ledger Size
                                     <Info size={12} className="opacity-50" />
                                 </div>
-                                <div className="font-medium">{formatSize(topicData.internal_stats.current_ledger_size)}</div>
+                                <div className="font-medium">{formatBytes(topicData.internal_stats.current_ledger_size)}</div>
                                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#1a1a2e] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal w-64 pointer-events-none shadow-xl border border-white/10 z-10">
                                     Size of the current active ledger in bytes. When this reaches the configured maximum ledger size, Pulsar rolls over to a new ledger automatically.
                                 </div>
@@ -703,7 +698,7 @@ export default function TopicDetailPage() {
                                                 <td className="p-4">{producer.producer_name || 'Unknown'}</td>
                                                 <td className="p-4 text-muted-foreground">{producer.address || '-'}</td>
                                                 <td className="p-4 text-right">{formatRate(producer.msg_rate_in)}</td>
-                                                <td className="p-4 text-right">{formatSize(producer.msg_throughput_in)}/s</td>
+                                                <td className="p-4 text-right">{formatBytes(producer.msg_throughput_in)}/s</td>
                                             </tr>
                                         ))}
                                     </tbody>

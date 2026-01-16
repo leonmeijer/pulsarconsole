@@ -7,6 +7,7 @@ import { useTopics, useCreateTopic, useDeleteTopic, useDeleteNamespace } from "@
 import { useFavorites } from "@/context/FavoritesContext";
 import { PermissionGate } from "@/components/auth";
 import { ConfirmDialog } from "@/components/shared";
+import { formatBytes } from "@/lib/format";
 
 export default function TopicsPage() {
     const { tenant, namespace } = useParams<{ tenant: string; namespace: string }>();
@@ -78,12 +79,6 @@ export default function TopicsPage() {
         return `${rate.toFixed(1)}/s`;
     };
 
-    const formatSize = (bytes: number) => {
-        if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
-        if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-        if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${Math.round(bytes)} B`;
-    };
 
     return (
         <div className="space-y-8">
@@ -275,13 +270,13 @@ export default function TopicsPage() {
                                 </div>
                                 <div className="bg-white/5 rounded-lg p-2">
                                     <div className="text-muted-foreground text-xs">Storage</div>
-                                    <div className="font-semibold">{formatSize(topic.storage_size)}</div>
+                                    <div className="font-semibold">{formatBytes(topic.storage_size)}</div>
                                 </div>
                             </div>
 
                             <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-4">
                                 <div className="text-xs text-muted-foreground">
-                                    Backlog: {formatSize(topic.backlog_size)}
+                                    Backlog: {formatBytes(topic.backlog_size)}
                                 </div>
                                 <Link
                                     to={`/tenants/${tenant}/namespaces/${namespace}/topics/${topic.name}`}

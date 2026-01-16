@@ -25,6 +25,7 @@ import { useDashboardStats, useHealthStatus, useTopTenants, useBrokers, useEnvir
 import { MetricCard, ChartContainer, TimeSeriesChart, SimpleBarChart } from "@/components/shared";
 import { useAutoRefresh, formatLastRefresh } from "@/hooks/useAutoRefresh";
 import { cn } from "@/lib/utils";
+import { formatBytes } from "@/lib/format";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 export default function DashboardPage() {
@@ -59,13 +60,6 @@ export default function DashboardPage() {
         return `${rate.toFixed(1)}/s`;
     };
 
-    const formatBytes = (bytes: number) => {
-        if (bytes >= 1099511627776) return `${(bytes / 1099511627776).toFixed(1)} TB`;
-        if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
-        if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-        if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${Math.round(bytes)} B`;
-    };
 
     const HealthIcon = health?.overall === "healthy"
         ? CheckCircle

@@ -8,6 +8,7 @@ import type { Namespace, NamespacePolicies } from "@/api/types";
 import { NamespacePolicyEditor } from "@/components/shared";
 import { useFavorites } from "@/context/FavoritesContext";
 import { PermissionGate } from "@/components/auth";
+import { formatBytes } from "@/lib/format";
 
 export default function NamespacesPage() {
     const { tenant } = useParams<{ tenant: string }>();
@@ -60,12 +61,6 @@ export default function NamespacesPage() {
         return `${rate.toFixed(1)}/s`;
     };
 
-    const formatSize = (bytes: number) => {
-        if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
-        if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-        if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${Math.round(bytes)} B`;
-    };
 
     const formatMinutes = (minutes?: number) => {
         if (!minutes) return "Unlimited";
@@ -224,7 +219,7 @@ export default function NamespacesPage() {
                                 <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
                                     <span>{ns.topic_count} Topics</span>
                                     <span>•</span>
-                                    <span>Storage: {formatSize(ns.total_storage_size)}</span>
+                                    <span>Storage: {formatBytes(ns.total_storage_size)}</span>
                                 </div>
                             </div>
 

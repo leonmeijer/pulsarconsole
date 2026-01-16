@@ -27,6 +27,7 @@ import {
 import type { Subscription, Consumer, SubscriptionCreate } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/shared";
+import { formatBytes } from "@/lib/format";
 
 function formatRate(rate: number): string {
     if (rate >= 1000000) return `${(rate / 1000000).toFixed(1)}M/s`;
@@ -34,12 +35,6 @@ function formatRate(rate: number): string {
     return `${rate.toFixed(1)}/s`;
 }
 
-function formatBytes(bytes: number): string {
-    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
-    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${Math.round(bytes)} B`;
-}
 
 function getBacklogStatus(backlog: number): { color: string; label: string } {
     if (backlog === 0) return { color: "text-green-400", label: "Clear" };

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { RefreshCcw, Server, Activity, Cpu, HardDrive, Play, Pause } from "lucide-react";
 import { useState } from "react";
 import { useBrokers, useClusterInfo } from "@/api/hooks";
+import { formatBytes } from "@/lib/format";
 
 export default function BrokersPage() {
     const [isPaused, setIsPaused] = useState(false);
@@ -14,12 +15,7 @@ export default function BrokersPage() {
         return `${rate.toFixed(1)}/s`;
     };
 
-    const formatBytes = (bytes: number) => {
-        if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB/s`;
-        if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB/s`;
-        if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB/s`;
-        return `${Math.round(bytes)} B/s`;
-    };
+    const formatBytesPerSecond = (bytes: number) => `${formatBytes(bytes)}/s`;
 
     return (
         <div className="space-y-8">
@@ -136,7 +132,7 @@ export default function BrokersPage() {
                                         Messages In
                                     </div>
                                     <div className="font-bold">{formatRate(broker.msg_rate_in)}</div>
-                                    <div className="text-xs text-muted-foreground">{formatBytes(broker.msg_throughput_in)}</div>
+                                    <div className="text-xs text-muted-foreground">{formatBytesPerSecond(broker.msg_throughput_in)}</div>
                                 </div>
                                 <div className="bg-white/5 rounded-lg p-3">
                                     <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
@@ -144,7 +140,7 @@ export default function BrokersPage() {
                                         Messages Out
                                     </div>
                                     <div className="font-bold">{formatRate(broker.msg_rate_out)}</div>
-                                    <div className="text-xs text-muted-foreground">{formatBytes(broker.msg_throughput_out)}</div>
+                                    <div className="text-xs text-muted-foreground">{formatBytesPerSecond(broker.msg_throughput_out)}</div>
                                 </div>
                             </div>
 

@@ -356,9 +356,13 @@ class AuthService:
                 # Only revoke if sync is enabled and user was not first user
                 should_sync = self._should_sync_roles(provider)
                 if should_sync:
-                    # Check if user was the very first user (they keep admin)
-                    # We don't revoke admin from first user
-                    pass  # Don't revoke from users who got admin via first-user logic
+                    user.is_global_admin = False
+                    logger.info(
+                        "User global admin revoked - no longer in admin OIDC groups",
+                        user_id=str(user.id),
+                        email=user.email,
+                        groups=groups,
+                    )
 
             # Apply group-to-role mappings
             await self._apply_group_role_mappings(user, groups, provider)

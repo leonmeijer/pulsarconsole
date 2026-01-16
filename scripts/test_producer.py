@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test producer script to generate messages for dashboard testing."""
 
+import os
 import time
 import json
 import asyncio
@@ -16,12 +17,37 @@ except ImportError:
 
 
 def produce_messages():
-    """Produce messages at ~10 per second."""
+    """Produce messages at ~10 per second.
 
-    # Connection settings
-    service_url = "pulsar://192.168.30.41:30650"
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwdWxzYXItY29uc29sZSJ9.ihedkW6-9esrSdGkbkq1kEA-iP-wfq6AwzXRwcuT050"
+    Environment variables:
+        PULSAR_SERVICE_URL: Pulsar broker URL (e.g., pulsar://localhost:6650)
+        PULSAR_AUTH_TOKEN: JWT authentication token for Pulsar
+
+    Example usage:
+        export PULSAR_SERVICE_URL="pulsar://localhost:6650"
+        export PULSAR_AUTH_TOKEN="your-jwt-token-here"
+        python test_producer.py
+
+    Or with bws (Bitwarden Secrets Manager):
+        bws run -- python test_producer.py
+    """
+
+    # Connection settings from environment variables
+    service_url = os.environ.get("PULSAR_SERVICE_URL")
+    token = os.environ.get("PULSAR_AUTH_TOKEN")
     topic = "persistent://public/default/test-metrics"
+
+    # Validate required environment variables
+    if not service_url:
+        raise ValueError(
+            "PULSAR_SERVICE_URL environment variable is required. "
+            "Example: export PULSAR_SERVICE_URL='pulsar://localhost:6650'"
+        )
+    if not token:
+        raise ValueError(
+            "PULSAR_AUTH_TOKEN environment variable is required. "
+            "Set this to your Pulsar JWT authentication token."
+        )
 
     print(f"Connecting to {service_url}...")
 
