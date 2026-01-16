@@ -131,7 +131,41 @@ export default function LoginPage() {
           )}
 
           {/* Provider Selection */}
-          {providers.length > 0 ? (
+          {providers.length === 1 ? (
+            // Single provider - show direct login button
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border border-white/10 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{providers[0].name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {providers[0].issuer_url}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleLogin(providers[0].id)}
+                disabled={isLoggingIn}
+                className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    Sign in with SSO
+                  </>
+                )}
+              </button>
+            </div>
+          ) : providers.length > 1 ? (
+            // Multiple providers - show selection UI
             <div className="space-y-4">
               <label className="block text-sm font-medium mb-2">
                 Select Identity Provider

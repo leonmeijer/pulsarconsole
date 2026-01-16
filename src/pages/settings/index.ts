@@ -3,3 +3,4 @@ export { default as RolesPage } from './RolesPage';
 export { default as UsersPage } from './UsersPage';
 export { default as SessionsPage } from './SessionsPage';
 export { default as PulsarAuthPage } from './PulsarAuthPage';
+export { default as OIDCSettingsPage } from './OIDCSettingsPage';

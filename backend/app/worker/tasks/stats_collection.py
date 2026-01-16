@@ -9,11 +9,6 @@ from app.core.logging import get_logger
 from app.core.events import event_bus
 from app.models.stats import BrokerStats, SubscriptionStats, TopicStats
 from app.repositories.environment import EnvironmentRepository
-from app.repositories.stats import (
-    BrokerStatsRepository,
-    SubscriptionStatsRepository,
-    TopicStatsRepository,
-)
 from app.services.pulsar_admin import PulsarAdminService
 from app.worker.celery_app import celery_app
 
@@ -30,21 +25,21 @@ def run_async(coro):
         loop.close()
 
 
-async def _get_pulsar_client() -> PulsarAdminService | None:
-    """Get Pulsar client from environment configuration."""
+async def _get_pulsar_client() -> tuple[PulsarAdminService, str] | tuple[None, None]:
+    """Get Pulsar client and environment ID from environment configuration."""
     async with async_session_factory() as session:
         env_repo = EnvironmentRepository(session)
         envs = await env_repo.get_all(limit=1)
         if not envs:
-            return None
+            return None, None
         env = envs[0]
         token = env_repo.get_decrypted_token(env)
-        return PulsarAdminService(admin_url=env.admin_url, auth_token=token)
+        return PulsarAdminService(admin_url=env.admin_url, auth_token=token), str(env.id)
 
 
 async def _collect_topic_stats_async():
     """Async implementation of topic stats collection."""
-    client = await _get_pulsar_client()
+    client, env_id = await _get_pulsar_client()
     if client is None:
         logger.warning("No environment configured, skipping topic stats collection")
         return 0
@@ -69,22 +64,19 @@ async def _collect_topic_stats_async():
                                 parts = topic_full.replace("persistent://", "").split("/")
                                 topic_name = parts[-1] if len(parts) > 2 else topic_full
 
-                                stats = await client.get_topic_stats(
-                                    tenant, ns, topic_name, persistent=True
-                                )
+                                stats = await client.get_topic_stats(topic_full)
 
                                 topic_stats = TopicStats(
-                                    topic=topic_full,
+                                    environment_id=env_id,
+                                    topic=topic_name,
                                     tenant=tenant,
                                     namespace=ns,
-                                    producer_count=len(stats.get("publishers", [])),
-                                    subscription_count=len(stats.get("subscriptions", {})),
                                     msg_rate_in=stats.get("msgRateIn", 0),
                                     msg_rate_out=stats.get("msgRateOut", 0),
                                     msg_throughput_in=stats.get("msgThroughputIn", 0),
                                     msg_throughput_out=stats.get("msgThroughputOut", 0),
-                                    storage_size=stats.get("storageSize", 0),
-                                    backlog_size=stats.get("backlogSize", 0),
+                                    storage_size=int(stats.get("storageSize", 0)),
+                                    backlog_size=int(stats.get("backlogSize", 0)),
                                     collected_at=datetime.now(timezone.utc),
                                 )
                                 all_stats.append(topic_stats)
@@ -110,8 +102,8 @@ async def _collect_topic_stats_async():
         # Batch insert stats
         if all_stats:
             async with async_session_factory() as session:
-                repo = TopicStatsRepository(session)
-                await repo.batch_insert(all_stats)
+                session.add_all(all_stats)
+                await session.commit()
                 collected = len(all_stats)
         
         # Trigger real-time UI refresh for stats and lists
@@ -128,7 +120,7 @@ async def _collect_topic_stats_async():
 
 async def _collect_subscription_stats_async():
     """Async implementation of subscription stats collection."""
-    client = await _get_pulsar_client()
+    client, env_id = await _get_pulsar_client()
     if client is None:
         logger.warning("No environment configured, skipping subscription stats collection")
         return 0
@@ -150,21 +142,19 @@ async def _collect_subscription_stats_async():
                                 parts = topic_full.replace("persistent://", "").split("/")
                                 topic_name = parts[-1] if len(parts) > 2 else topic_full
 
-                                stats = await client.get_topic_stats(
-                                    tenant, ns, topic_name, persistent=True
-                                )
+                                stats = await client.get_topic_stats(topic_full)
 
                                 for sub_name, sub_stats in stats.get("subscriptions", {}).items():
                                     sub = SubscriptionStats(
-                                        topic=topic_full,
+                                        environment_id=env_id,
+                                        topic=topic_name,
                                         subscription=sub_name,
                                         tenant=tenant,
                                         namespace=ns,
-                                        msg_backlog=sub_stats.get("msgBacklog", 0),
+                                        msg_backlog=int(sub_stats.get("msgBacklog", 0)),
                                         msg_rate_out=sub_stats.get("msgRateOut", 0),
                                         msg_throughput_out=sub_stats.get("msgThroughputOut", 0),
                                         consumer_count=len(sub_stats.get("consumers", [])),
-                                        subscription_type=sub_stats.get("type", "Exclusive"),
                                         collected_at=datetime.now(timezone.utc),
                                     )
                                     all_stats.append(sub)
@@ -181,8 +171,8 @@ async def _collect_subscription_stats_async():
 
         if all_stats:
             async with async_session_factory() as session:
-                repo = SubscriptionStatsRepository(session)
-                await repo.batch_insert(all_stats)
+                session.add_all(all_stats)
+                await session.commit()
                 collected = len(all_stats)
 
     finally:
@@ -193,7 +183,7 @@ async def _collect_subscription_stats_async():
 
 async def _collect_broker_stats_async():
     """Async implementation of broker stats collection."""
-    client = await _get_pulsar_client()
+    client, env_id = await _get_pulsar_client()
     if client is None:
         logger.warning("No environment configured, skipping broker stats collection")
         return 0
@@ -209,15 +199,10 @@ async def _collect_broker_stats_async():
                 load = await client.get_broker_load(broker_url)
 
                 broker_stats = BrokerStats(
-                    broker=broker_url,
-                    topics_count=stats.get("numTopics", 0),
-                    bundles_count=stats.get("numBundles", 0),
-                    producers_count=stats.get("numProducers", 0),
-                    consumers_count=stats.get("numConsumers", 0),
+                    environment_id=env_id,
+                    broker_url=broker_url,
                     msg_rate_in=stats.get("msgRateIn", 0),
                     msg_rate_out=stats.get("msgRateOut", 0),
-                    msg_throughput_in=stats.get("msgThroughputIn", 0),
-                    msg_throughput_out=stats.get("msgThroughputOut", 0),
                     cpu_usage=load.get("cpu", {}).get("usage", 0),
                     memory_usage=load.get("memory", {}).get("usage", 0),
                     direct_memory_usage=load.get("directMemory", {}).get("usage", 0),
@@ -233,10 +218,10 @@ async def _collect_broker_stats_async():
 
         if all_stats:
             async with async_session_factory() as session:
-                repo = BrokerStatsRepository(session)
-                await repo.batch_insert(all_stats)
+                session.add_all(all_stats)
+                await session.commit()
                 collected = len(all_stats)
-        
+
         # Trigger UI refresh for brokers
         await event_bus.publish("BROKERS_UPDATED")
 

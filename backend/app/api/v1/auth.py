@@ -295,6 +295,7 @@ async def handle_callback(
             code_verifier=state_data.get("code_verifier"),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
+            environment_id=environment_id,
         )
 
         # Set session cookie

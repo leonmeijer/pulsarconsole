@@ -53,14 +53,18 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = Field(default=60)
 
     # -------------------------------------------------------------------------
-    # Pulsar Cluster
+    # Pulsar Cluster (Default Environment)
     # -------------------------------------------------------------------------
+    # These settings are used to auto-provision a default environment on startup
+    # if no environments exist in the database yet.
     pulsar_admin_url: str = Field(default="http://localhost:8080")
     pulsar_service_url: str = Field(default="pulsar://localhost:6650")
     pulsar_cluster: str = Field(default="standalone")
     pulsar_auth_token: str | None = Field(default=None)
     pulsar_tls_enabled: bool = Field(default=False)
     pulsar_tls_allow_insecure: bool = Field(default=True)
+    # Auto-provision default environment from these settings on startup
+    pulsar_auto_provision: bool = Field(default=True)
 
     # Pulsar OAuth2 (Machine-to-Machine)
     pulsar_auth_enabled: bool = Field(default=False)
@@ -111,6 +115,15 @@ class Settings(BaseSettings):
     oidc_client_id: str | None = Field(default=None)
     oidc_client_secret: str | None = Field(default=None)  # Optional when using PKCE
     oidc_use_pkce: bool = Field(default=True)  # Use PKCE by default (recommended)
+
+    # OIDC Group Mapping (Global defaults)
+    # Claim name in OIDC token containing user groups (e.g., "groups", "roles")
+    oidc_role_claim: str = Field(default="groups")
+    # Comma-separated list of OIDC groups that grant global admin access
+    # e.g., "admins,superusers,pulsar-admins"
+    oidc_admin_groups: str | None = Field(default=None)
+    # Whether to sync roles from OIDC groups on every login (removes roles not in groups)
+    oidc_sync_roles_on_login: bool = Field(default=True)
 
     # -------------------------------------------------------------------------
     # Session Settings
@@ -174,6 +187,14 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Check if running in production mode."""
         return self.app_env == "production"
+
+    @computed_field
+    @property
+    def oidc_admin_groups_list(self) -> list[str]:
+        """Parse OIDC admin groups from comma-separated string."""
+        if not self.oidc_admin_groups:
+            return []
+        return [g.strip() for g in self.oidc_admin_groups.split(",") if g.strip()]
 
     @model_validator(mode="after")
     def resolve_bws_secrets(self) -> "Settings":

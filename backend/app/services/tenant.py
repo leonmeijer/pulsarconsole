@@ -77,6 +77,8 @@ class TenantService:
                 "total_backlog": 0,
                 "msg_rate_in": 0.0,
                 "msg_rate_out": 0.0,
+                "msg_throughput_in": 0.0,
+                "msg_throughput_out": 0.0,
             }
 
             # Get namespaces and aggregate stats
@@ -89,6 +91,8 @@ class TenantService:
                 total_backlog = 0
                 total_rate_in = 0.0
                 total_rate_out = 0.0
+                total_throughput_in = 0.0
+                total_throughput_out = 0.0
 
                 for ns in namespaces:
                     ns_name = ns.split("/")[-1] if "/" in ns else ns
@@ -108,15 +112,19 @@ class TenantService:
                                     total_backlog += sub_stats.get("msgBacklog", 0)
                                 total_rate_in += stats.get("msgRateIn", 0)
                                 total_rate_out += stats.get("msgRateOut", 0)
+                                total_throughput_in += stats.get("msgThroughputIn", 0)
+                                total_throughput_out += stats.get("msgThroughputOut", 0)
                             except Exception:
                                 pass
                     except Exception:
                         pass
-                
+
                 tenant_data["topic_count"] = total_topics
                 tenant_data["total_backlog"] = total_backlog
                 tenant_data["msg_rate_in"] = total_rate_in
                 tenant_data["msg_rate_out"] = total_rate_out
+                tenant_data["msg_throughput_in"] = total_throughput_in
+                tenant_data["msg_throughput_out"] = total_throughput_out
 
             except Exception:
                 pass

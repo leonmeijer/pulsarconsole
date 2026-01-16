@@ -27,6 +27,7 @@ import type {
   BrokerListResponse,
   ClusterInfo,
   BrowseMessagesResponse,
+  ExamineMessagesResponse,
   SuccessResponse,
   DashboardStats,
   HealthStatus,
@@ -48,12 +49,17 @@ import type {
   PulsarTokenResponse,
   SessionInfo,
   UserPermission,
+  // OIDC Provider Config types
+  OIDCProviderConfig,
+  OIDCProviderConfigCreate,
+  OIDCProviderConfigUpdate,
 } from './types';
 
 // Query Keys
 export const queryKeys = {
   environment: ['environment'] as const,
   environments: ['environments'] as const,
+  oidcProvider: (envId: string) => ['oidc-provider', envId] as const,
   tenants: ['tenants'] as const,
   tenant: (name: string) => ['tenants', name] as const,
   namespaces: (tenant: string) => ['namespaces', tenant] as const,
@@ -173,6 +179,64 @@ export function useDeleteEnvironment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.environment });
       queryClient.invalidateQueries({ queryKey: queryKeys.environments });
+    },
+  });
+}
+
+// OIDC Provider Hooks
+export function useOIDCProvider(environmentId: string | undefined) {
+  return useQuery<OIDCProviderConfig | null>({
+    queryKey: queryKeys.oidcProvider(environmentId || ''),
+    queryFn: async () => {
+      if (!environmentId) return null;
+      const { data } = await api.get<OIDCProviderConfig | null>(`/api/v1/environment/${environmentId}/oidc-provider`);
+      return data;
+    },
+    enabled: !!environmentId,
+  });
+}
+
+export function useCreateOIDCProvider() {
+  const queryClient = useQueryClient();
+  return useMutation<OIDCProviderConfig, Error, { environmentId: string; data: OIDCProviderConfigCreate }>({
+    mutationFn: async ({ environmentId, data: providerData }) => {
+      const { data } = await api.post<OIDCProviderConfig>(
+        `/api/v1/environment/${environmentId}/oidc-provider`,
+        providerData
+      );
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.oidcProvider(variables.environmentId) });
+    },
+  });
+}
+
+export function useUpdateOIDCProvider() {
+  const queryClient = useQueryClient();
+  return useMutation<OIDCProviderConfig, Error, { environmentId: string; data: OIDCProviderConfigUpdate }>({
+    mutationFn: async ({ environmentId, data: providerData }) => {
+      const { data } = await api.put<OIDCProviderConfig>(
+        `/api/v1/environment/${environmentId}/oidc-provider`,
+        providerData
+      );
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.oidcProvider(variables.environmentId) });
+    },
+  });
+}
+
+export function useDeleteOIDCProvider() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (environmentId) => {
+      const { data } = await api.delete<SuccessResponse>(`/api/v1/environment/${environmentId}/oidc-provider`);
+      return data;
+    },
+    onSuccess: (_, environmentId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.oidcProvider(environmentId) });
     },
   });
 }
@@ -313,7 +377,7 @@ export function useTopics(tenant: string, namespace: string, persistent = true, 
   });
 }
 
-export function useTopic(tenant: string, namespace: string, topic: string, persistent = true) {
+export function useTopic(tenant: string, namespace: string, topic: string, persistent = true, paused = false) {
   return useQuery<TopicDetail>({
     queryKey: queryKeys.topic(tenant, namespace, topic),
     queryFn: async () => {
@@ -324,6 +388,7 @@ export function useTopic(tenant: string, namespace: string, topic: string, persi
       return data;
     },
     enabled: !!tenant && !!namespace && !!topic,
+    refetchInterval: paused ? false : 10000, // Auto-refresh every 10 seconds when not paused
   });
 }
 
@@ -377,8 +442,25 @@ export function useUpdateTopicPartitions(tenant: string, namespace: string, topi
   });
 }
 
+export function useTruncateTopic(tenant: string, namespace: string, topic: string) {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, { persistent?: boolean }>({
+    mutationFn: async ({ persistent = true }) => {
+      const { data } = await api.post<SuccessResponse>(
+        `/api/v1/tenants/${tenant}/namespaces/${namespace}/topics/${topic}/truncate`,
+        {},
+        { params: { persistent } }
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.topic(tenant, namespace, topic) });
+    },
+  });
+}
+
 // Subscription Hooks
-export function useSubscriptions(tenant: string, namespace: string, topic: string, persistent = true) {
+export function useSubscriptions(tenant: string, namespace: string, topic: string, persistent = true, paused = false) {
   return useQuery<Subscription[]>({
     queryKey: queryKeys.subscriptions(tenant, namespace, topic),
     queryFn: async () => {
@@ -389,10 +471,11 @@ export function useSubscriptions(tenant: string, namespace: string, topic: strin
       return data.subscriptions;
     },
     enabled: !!tenant && !!namespace && !!topic,
+    refetchInterval: paused ? false : 10000, // Auto-refresh every 10 seconds when not paused
   });
 }
 
-export function useSubscription(tenant: string, namespace: string, topic: string, subscription: string, persistent = true) {
+export function useSubscription(tenant: string, namespace: string, topic: string, subscription: string, persistent = true, paused = false) {
   return useQuery<SubscriptionDetail>({
     queryKey: queryKeys.subscription(tenant, namespace, topic, subscription),
     queryFn: async () => {
@@ -403,6 +486,7 @@ export function useSubscription(tenant: string, namespace: string, topic: string
       return data;
     },
     enabled: !!tenant && !!namespace && !!topic && !!subscription,
+    refetchInterval: paused ? false : 10000, // Auto-refresh every 10 seconds when not paused
   });
 }
 
@@ -550,6 +634,25 @@ export function useBrowseMessages(
   });
 }
 
+// Examine Messages Hook (browse without subscription)
+export function useExamineMessages(
+  tenant: string,
+  namespace: string,
+  topic: string,
+  count = 10
+) {
+  return useMutation<ExamineMessagesResponse, Error, { initial_position?: 'earliest' | 'latest'; persistent?: boolean }>({
+    mutationFn: async ({ initial_position = 'earliest', persistent = true }) => {
+      const { data } = await api.post<ExamineMessagesResponse>(
+        `/api/v1/tenants/${tenant}/namespaces/${namespace}/topics/${topic}/messages/examine`,
+        { initial_position, count },
+        { params: { persistent } }
+      );
+      return data;
+    },
+  });
+}
+
 // Dashboard Hooks
 export function useDashboardStats(options: { paused?: boolean } = {}) {
   const { paused = false } = options;
@@ -565,7 +668,9 @@ export function useDashboardStats(options: { paused?: boolean } = {}) {
       const tenants = tenantsRes.data.tenants || [];
       const brokers = brokersRes.data.brokers || [];
 
-      // Calculate aggregate statistics - use broker rates for live metrics
+      // Calculate aggregate statistics
+      // Use tenant-based rates (aggregated from all topics) for accurate cluster-wide metrics
+      // Broker stats only show data for one broker when behind a proxy
       const stats: DashboardStats = {
         tenants: tenants.length,
         namespaces: tenants.reduce((sum, t) => sum + (t.namespace_count || 0), 0),
@@ -574,10 +679,10 @@ export function useDashboardStats(options: { paused?: boolean } = {}) {
         producers: brokers.reduce((sum, b) => sum + (b.producers_count || 0), 0),
         consumers: brokers.reduce((sum, b) => sum + (b.consumers_count || 0), 0),
         brokers: brokers.length,
-        msg_rate_in: brokers.reduce((sum, b) => sum + (b.msg_rate_in || 0), 0),
-        msg_rate_out: brokers.reduce((sum, b) => sum + (b.msg_rate_out || 0), 0),
-        throughput_in: brokers.reduce((sum, b) => sum + (b.msg_throughput_in || 0), 0),
-        throughput_out: brokers.reduce((sum, b) => sum + (b.msg_throughput_out || 0), 0),
+        msg_rate_in: tenants.reduce((sum, t) => sum + (t.msg_rate_in || 0), 0),
+        msg_rate_out: tenants.reduce((sum, t) => sum + (t.msg_rate_out || 0), 0),
+        throughput_in: tenants.reduce((sum, t) => sum + (t.msg_throughput_in || 0), 0),
+        throughput_out: tenants.reduce((sum, t) => sum + (t.msg_throughput_out || 0), 0),
         storage_size: 0,
         backlog_size: tenants.reduce((sum, t) => sum + (t.total_backlog || 0), 0),
       };

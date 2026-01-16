@@ -28,7 +28,12 @@ class BrokerService:
         self.stats_repo = BrokerStatsRepository(session)
 
     async def get_brokers(self, use_cache: bool = True) -> list[dict[str, Any]]:
-        """Get all active brokers in the cluster."""
+        """Get all active brokers in the cluster.
+
+        Note: When accessed through a proxy, we can only get stats from the broker
+        that handles the request. The dashboard uses tenant-aggregated stats for
+        accurate cluster-wide message rates.
+        """
         env_id = self.pulsar.environment_id or "default"
         # Try cache first
         if use_cache:
@@ -36,10 +41,11 @@ class BrokerService:
             if cached:
                 return cached
 
-        # Fetch from Pulsar
+        # Fetch broker URLs from Pulsar
         broker_urls = await self.pulsar.get_active_brokers()
 
-        # Get load report for stats
+        # Get stats from the connected broker's load report
+        # Note: This only shows data for one broker when behind a proxy
         try:
             load_report = await self.pulsar.get_broker_stats()
             if load_report is None:
@@ -49,6 +55,24 @@ class BrokerService:
 
         brokers = []
         for url in broker_urls:
+            # Calculate CPU percentage (usage / limit * 100)
+            cpu_data = load_report.get("cpu", {}) if isinstance(load_report.get("cpu"), dict) else {}
+            cpu_usage = cpu_data.get("usage", 0)
+            cpu_limit = cpu_data.get("limit", 100)  # Default to 100 to avoid division by zero
+            cpu_percent = (cpu_usage / cpu_limit * 100) if cpu_limit > 0 else 0
+
+            # Calculate Memory percentage (usage / limit * 100)
+            mem_data = load_report.get("memory", {}) if isinstance(load_report.get("memory"), dict) else {}
+            mem_usage = mem_data.get("usage", 0)
+            mem_limit = mem_data.get("limit", 100)
+            mem_percent = (mem_usage / mem_limit * 100) if mem_limit > 0 else 0
+
+            # Calculate Direct Memory percentage
+            direct_data = load_report.get("directMemory", {}) if isinstance(load_report.get("directMemory"), dict) else {}
+            direct_usage = direct_data.get("usage", 0)
+            direct_limit = direct_data.get("limit", 100)
+            direct_percent = (direct_usage / direct_limit * 100) if direct_limit > 0 else 0
+
             broker_data = {
                 "url": url,
                 "topics_count": load_report.get("numTopics", 0),
@@ -59,11 +83,10 @@ class BrokerService:
                 "msg_rate_out": load_report.get("msgRateOut", 0),
                 "msg_throughput_in": load_report.get("msgThroughputIn", 0),
                 "msg_throughput_out": load_report.get("msgThroughputOut", 0),
-                "cpu_usage": load_report.get("cpu", {}).get("usage", 0) if isinstance(load_report.get("cpu"), dict) else 0,
-                "memory_usage": load_report.get("memory", {}).get("usage", 0) if isinstance(load_report.get("memory"), dict) else 0,
-                "direct_memory_usage": load_report.get("directMemory", {}).get("usage", 0) if isinstance(load_report.get("directMemory"), dict) else 0,
+                "cpu_usage": round(cpu_percent, 1),
+                "memory_usage": round(mem_percent, 1),
+                "direct_memory_usage": round(direct_percent, 1),
             }
-
             brokers.append(broker_data)
 
         # Cache result

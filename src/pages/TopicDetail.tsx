@@ -18,12 +18,16 @@ import {
     Settings,
     Star,
     Info,
-    Trash2
+    Trash2,
+    Eraser,
+    Pause,
+    Play,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useTopic, useSubscriptions, useBrowseMessages, useDeleteTopic } from "@/api/hooks";
+import { useTopic, useSubscriptions, useBrowseMessages, useExamineMessages, useDeleteTopic, useTruncateTopic, queryKeys } from "@/api/hooks";
+import { useAutoRefresh, formatLastRefresh } from "@/hooks/useAutoRefresh";
 import type { Message, MessagePayload } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { TopicPartitionEditor, ConfirmDialog } from "@/components/shared";
@@ -40,7 +44,7 @@ function formatSize(bytes: number): string {
     if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
     if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
     if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${bytes} B`;
+    return `${Math.round(bytes)} B`;
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -109,6 +113,36 @@ function MessageCard({ message }: { message: Message }) {
         toast.success("Copied to clipboard");
     };
 
+    // Try to get a meaningful identifier from the message
+    const getMessageTitle = () => {
+        // Check properties first (e.g., doc_id, id, etc.)
+        const props = message.properties || {};
+        if (props.doc_id) return props.doc_id;
+        if (props.id) return props.id;
+
+        // Check payload content for common ID fields
+        if (message.payload?.type === 'json' && message.payload.content) {
+            const content = message.payload.content as Record<string, unknown>;
+            if (typeof content === 'object' && content !== null) {
+                if (content.doc_id) return String(content.doc_id);
+                if (content.id) return String(content.id);
+                if (content.document_id) return String(content.document_id);
+                if (content._id) return String(content._id);
+            }
+        }
+
+        // Check message key
+        if (message.key) return message.key;
+
+        // Fallback to index
+        return `Message #${message.index + 1}`;
+    };
+
+    const title = getMessageTitle();
+
+    // Check if there are any details to show
+    const hasDetails = message.key || message.event_time || Object.keys(message.properties || {}).length > 0;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -121,7 +155,7 @@ function MessageCard({ message }: { message: Message }) {
                         <FileText size={18} className="text-primary" />
                     </div>
                     <div>
-                        <div className="font-medium">Message #{message.index + 1}</div>
+                        <div className="font-medium truncate max-w-md" title={title}>{title}</div>
                         {message.message_id && (
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span className="font-mono">{message.message_id.slice(0, 20)}...</span>
@@ -135,12 +169,14 @@ function MessageCard({ message }: { message: Message }) {
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowDetails(!showDetails)}
-                    className="text-muted-foreground hover:text-primary"
-                >
-                    {showDetails ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                </button>
+                {hasDetails && (
+                    <button
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="text-muted-foreground hover:text-primary"
+                    >
+                        {showDetails ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                    </button>
+                )}
             </div>
 
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -213,22 +249,35 @@ function MessageBrowser({
     topic: string;
     subscriptions: { name: string }[];
 }) {
+    const [browseMode, setBrowseMode] = useState<'subscription' | 'all'>('all');
     const [selectedSub, setSelectedSub] = useState(subscriptions[0]?.name || "");
+    const [initialPosition, setInitialPosition] = useState<'earliest' | 'latest'>('earliest');
     const [messageCount, setMessageCount] = useState(10);
     const [messages, setMessages] = useState<Message[]>([]);
 
     const browseMessages = useBrowseMessages(tenant, namespace, topic, selectedSub, messageCount);
+    const examineMessages = useExamineMessages(tenant, namespace, topic, messageCount);
+
+    const isLoading = browseMessages.isPending || examineMessages.isPending;
 
     const handleBrowse = async () => {
-        if (!selectedSub) {
+        if (browseMode === 'subscription' && !selectedSub) {
             toast.error("Select a subscription first");
             return;
         }
         try {
-            const result = await browseMessages.mutateAsync({});
-            setMessages(result.messages);
-            if (result.messages.length === 0) {
-                toast.info("No messages in this subscription");
+            if (browseMode === 'all') {
+                const result = await examineMessages.mutateAsync({ initial_position: initialPosition });
+                setMessages(result.messages);
+                if (result.messages.length === 0) {
+                    toast.info("No messages in this topic");
+                }
+            } else {
+                const result = await browseMessages.mutateAsync({});
+                setMessages(result.messages);
+                if (result.messages.length === 0) {
+                    toast.info("No messages in this subscription");
+                }
             }
         } catch (error) {
             toast.error("Failed to browse messages");
@@ -245,23 +294,69 @@ function MessageBrowser({
             </div>
 
             <div className="glass p-4 rounded-xl">
+                {/* Browse Mode Toggle */}
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={() => setBrowseMode('all')}
+                        className={cn(
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                            browseMode === 'all'
+                                ? "bg-primary text-white"
+                                : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                        )}
+                    >
+                        Browse All Messages
+                    </button>
+                    <button
+                        onClick={() => setBrowseMode('subscription')}
+                        className={cn(
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                            browseMode === 'subscription'
+                                ? "bg-primary text-white"
+                                : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                        )}
+                    >
+                        Browse by Subscription
+                    </button>
+                </div>
+
                 <div className="flex flex-wrap gap-4 items-end">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="block text-sm text-muted-foreground mb-2">
-                            Subscription
-                        </label>
-                        <select
-                            value={selectedSub}
-                            onChange={(e) => setSelectedSub(e.target.value)}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
-                        >
-                            {subscriptions.map((sub) => (
-                                <option key={sub.name} value={sub.name} className="bg-gray-900">
-                                    {sub.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {browseMode === 'subscription' ? (
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-sm text-muted-foreground mb-2">
+                                Subscription
+                            </label>
+                            <select
+                                value={selectedSub}
+                                onChange={(e) => setSelectedSub(e.target.value)}
+                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
+                            >
+                                {subscriptions.length === 0 ? (
+                                    <option value="" className="bg-gray-900">No subscriptions available</option>
+                                ) : (
+                                    subscriptions.map((sub) => (
+                                        <option key={sub.name} value={sub.name} className="bg-gray-900">
+                                            {sub.name}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-sm text-muted-foreground mb-2">
+                                Start Position
+                            </label>
+                            <select
+                                value={initialPosition}
+                                onChange={(e) => setInitialPosition(e.target.value as 'earliest' | 'latest')}
+                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:border-primary"
+                            >
+                                <option value="earliest" className="bg-gray-900">Earliest (oldest messages)</option>
+                                <option value="latest" className="bg-gray-900">Latest (newest messages)</option>
+                            </select>
+                        </div>
+                    )}
                     <div className="w-32">
                         <label className="block text-sm text-muted-foreground mb-2">
                             Count
@@ -279,13 +374,19 @@ function MessageBrowser({
                     </div>
                     <button
                         onClick={handleBrowse}
-                        disabled={browseMessages.isPending || !selectedSub}
+                        disabled={isLoading || (browseMode === 'subscription' && !selectedSub)}
                         className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
                     >
                         <Code size={18} />
-                        {browseMessages.isPending ? "Loading..." : "Browse Messages"}
+                        {isLoading ? "Loading..." : "Browse Messages"}
                     </button>
                 </div>
+
+                {browseMode === 'all' && (
+                    <p className="text-xs text-muted-foreground mt-3">
+                        Browse all messages in the topic regardless of subscription state. This doesn't consume messages.
+                    </p>
+                )}
             </div>
 
             {messages.length > 0 && (
@@ -305,12 +406,31 @@ function MessageBrowser({
 export default function TopicDetailPage() {
     const { tenant, namespace, topic } = useParams<{ tenant: string; namespace: string; topic: string }>();
     const navigate = useNavigate();
-    const { data: topicData, isLoading: topicLoading, refetch: refetchTopic } = useTopic(tenant!, namespace!, topic!);
-    const { data: subscriptions, isLoading: subsLoading, refetch: refetchSubs } = useSubscriptions(tenant!, namespace!, topic!);
+
+    const {
+        isAutoRefreshEnabled,
+        toggleAutoRefresh,
+        refresh,
+        lastRefresh,
+        secondsUntilRefresh,
+    } = useAutoRefresh({
+        enabled: true,
+        interval: 10000, // 10 seconds
+        queryKeys: [
+            queryKeys.topic(tenant!, namespace!, topic!),
+            queryKeys.subscriptions(tenant!, namespace!, topic!),
+        ],
+    });
+
+    const isPaused = !isAutoRefreshEnabled;
+    const { data: topicData, isLoading: topicLoading, refetch: refetchTopic } = useTopic(tenant!, namespace!, topic!, true, isPaused);
+    const { data: subscriptions, isLoading: subsLoading } = useSubscriptions(tenant!, namespace!, topic!, true, isPaused);
     const deleteTopic = useDeleteTopic(tenant!, namespace!);
-    
+    const truncateTopic = useTruncateTopic(tenant!, namespace!, topic!);
+
     const [showPartitionEditor, setShowPartitionEditor] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showTruncateConfirm, setShowTruncateConfirm] = useState(false);
     const { isFavorite, toggleFavorite } = useFavorites();
 
     const isLoading = topicLoading || subsLoading;
@@ -322,6 +442,16 @@ export default function TopicDetailPage() {
             navigate(`/tenants/${tenant}/namespaces/${namespace}/topics`);
         } catch (error) {
             toast.error("Failed to delete topic. It may have active subscriptions.");
+        }
+    };
+
+    const handleTruncate = async () => {
+        try {
+            await truncateTopic.mutateAsync({});
+            toast.success(`Topic '${topic}' cleared`);
+            refetchTopic();
+        } catch (error) {
+            toast.error("Failed to clear topic messages.");
         }
     };
 
@@ -348,13 +478,43 @@ export default function TopicDetailPage() {
                     <h1 className="text-3xl font-bold">{topic}</h1>
                     <p className="text-muted-foreground mt-1">Topic details, subscriptions, and message browser.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex items-center gap-3">
+                    {/* Auto-refresh indicator */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock size={14} />
+                        <span>Updated {formatLastRefresh(lastRefresh)}</span>
+                        {isAutoRefreshEnabled && (
+                            <span className="text-xs">({secondsUntilRefresh}s)</span>
+                        )}
+                    </div>
                     <button
-                        onClick={() => { refetchTopic(); refetchSubs(); }}
+                        onClick={toggleAutoRefresh}
+                        className={cn(
+                            "p-2 rounded-lg transition-colors",
+                            isAutoRefreshEnabled
+                                ? "bg-primary/20 text-primary"
+                                : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                        )}
+                        title={isAutoRefreshEnabled ? "Pause auto-refresh" : "Enable auto-refresh"}
+                    >
+                        {isAutoRefreshEnabled ? <Pause size={18} /> : <Play size={18} />}
+                    </button>
+                    <button
+                        onClick={refresh}
                         className="p-3 glass rounded-xl hover:bg-white/10 transition-all active:scale-95"
+                        disabled={isLoading}
                     >
                         <RefreshCcw size={20} className={isLoading ? "animate-spin" : ""} />
                     </button>
+                    <PermissionGate action="write" resourceLevel="topic" resourcePath={`${tenant}/${namespace}/${topic}`}>
+                        <button
+                            onClick={() => setShowTruncateConfirm(true)}
+                            className="flex items-center gap-2 px-4 py-3 bg-orange-500/20 text-orange-400 rounded-xl hover:bg-orange-500/30 transition-all active:scale-95"
+                        >
+                            <Eraser size={18} />
+                            Clear
+                        </button>
+                    </PermissionGate>
                     <PermissionGate action="write" resourceLevel="topic" resourcePath={`${tenant}/${namespace}/${topic}`}>
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
@@ -473,7 +633,7 @@ export default function TopicDetailPage() {
                                 </div>
                                 <div className="font-medium">{topicData.internal_stats.entries_added_counter.toLocaleString()}</div>
                                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#1a1a2e] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal w-64 pointer-events-none shadow-xl border border-white/10 z-10">
-                                    Cumulative count of all entries (messages) ever added to this topic since creation. This counter never decreases, even after messages are consumed or deleted.
+                                    Messages published since the broker loaded this topic. Resets to 0 when the broker restarts or the topic is unloaded. May be lower than Total Entries if messages existed before the last broker restart.
                                 </div>
                             </div>
                             <div className="group relative">
@@ -659,6 +819,17 @@ export default function TopicDetailPage() {
                         topic={topic!}
                         currentPartitions={topicData.partitions || 0}
                         onSuccess={() => refetchTopic()}
+                    />
+
+                    {/* Clear Topic Confirmation Dialog */}
+                    <ConfirmDialog
+                        open={showTruncateConfirm}
+                        onOpenChange={setShowTruncateConfirm}
+                        title="Clear Topic"
+                        description={`Are you sure you want to clear all messages from topic "${topic}"? This action cannot be undone and all messages will be permanently deleted.`}
+                        confirmLabel="Clear"
+                        variant="danger"
+                        onConfirm={handleTruncate}
                     />
 
                     {/* Delete Confirmation Dialog */}

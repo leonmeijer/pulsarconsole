@@ -13,7 +13,7 @@ import EnvironmentPage from "./pages/Environment";
 import AuditLogsPage from "./pages/AuditLogs";
 import NotificationsPage from "./pages/Notifications";
 import LoginPage from "./pages/LoginPage";
-import { TokensPage, RolesPage, UsersPage, SessionsPage, PulsarAuthPage } from "./pages/settings";
+import { TokensPage, RolesPage, UsersPage, SessionsPage, PulsarAuthPage, OIDCSettingsPage } from "./pages/settings";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
 
 const router = createBrowserRouter([
@@ -97,6 +97,10 @@ const router = createBrowserRouter([
       {
         path: "settings/pulsar-auth",
         element: <PulsarAuthPage />,
+      },
+      {
+        path: "settings/oidc",
+        element: <OIDCSettingsPage />,
       },
     ],
   },

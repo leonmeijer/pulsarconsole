@@ -4,7 +4,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -79,6 +79,29 @@ class OIDCProvider(BaseModel):
         String(100),
         nullable=True,
         doc="Default role to assign to new users",
+    )
+
+    # Group-to-role mapping configuration
+    # JSON object mapping OIDC group names to role names: {"oidc_group": "role_name"}
+    group_role_mappings: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        default=None,
+        doc="Mapping of OIDC groups to role names (e.g., {'developers': 'operator'})",
+    )
+    # OIDC groups that grant global admin access for this provider
+    admin_groups: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        default=None,
+        doc="OIDC groups that grant global admin access",
+    )
+    # Whether to sync roles from OIDC groups on every login
+    sync_roles_on_login: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+        doc="Sync roles from OIDC groups on every login (revokes roles not in groups)",
     )
 
     # Status

@@ -93,19 +93,31 @@ class TopicService:
         topics = []
         for full_name in topic_names:
             parsed = self.parse_topic_name(full_name)
-
-            # Get stats from DB if available
             topic_name = parsed.get("name", full_name)
-            stats = await self.stats_repo.get_latest_by_topic(tenant, namespace, topic_name)
+
+            # Fetch live stats from Pulsar for producer/subscription counts
+            producer_count = 0
+            subscription_count = 0
+            try:
+                live_stats = await self.pulsar.get_topic_stats(full_name)
+                producer_count = len(live_stats.get("publishers", []))
+                subscription_count = len(live_stats.get("subscriptions", {}))
+            except Exception:
+                pass  # Use defaults if live fetch fails
+
+            # Get cached stats from DB for other metrics
+            stats = await self.stats_repo.get_latest_by_topic(
+                tenant, namespace, topic_name
+            )
 
             topic_data = {
                 "tenant": tenant,
                 "namespace": namespace,
-                "name": parsed.get("name", full_name),
+                "name": topic_name,
                 "full_name": full_name,
                 "persistent": parsed.get("persistent", persistent),
-                "producer_count": stats.producer_count if stats else 0,
-                "subscription_count": stats.subscription_count if stats else 0,
+                "producer_count": producer_count,
+                "subscription_count": subscription_count,
                 "msg_rate_in": stats.msg_rate_in if stats else 0,
                 "msg_rate_out": stats.msg_rate_out if stats else 0,
                 "msg_throughput_in": stats.msg_throughput_in if stats else 0,
@@ -138,8 +150,11 @@ class TopicService:
         except NotFoundError:
             raise NotFoundError("topic", full_name)
 
-        # Get internal stats (not yet implemented, return empty)
-        internal_stats = {}
+        # Get internal stats
+        try:
+            internal_stats = await self.pulsar.get_topic_internal_stats(full_name)
+        except Exception:
+            internal_stats = {}
 
         # Get subscriptions
         subscriptions = []
@@ -391,6 +406,22 @@ class TopicService:
         await self.pulsar.offload_topic(tenant, namespace, topic, persistent)
         logger.info(
             "Topic offload triggered",
+            tenant=tenant,
+            namespace=namespace,
+            topic=topic,
+        )
+
+    async def truncate_topic(
+        self,
+        tenant: str,
+        namespace: str,
+        topic: str,
+        persistent: bool = True,
+    ) -> None:
+        """Truncate a topic (delete all messages)."""
+        await self.pulsar.truncate_topic(tenant, namespace, topic, persistent)
+        logger.info(
+            "Topic truncated",
             tenant=tenant,
             namespace=namespace,
             topic=topic,

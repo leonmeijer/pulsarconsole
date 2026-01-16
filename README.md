@@ -527,6 +527,74 @@ When OIDC is enabled and no users exist:
 1. The first user to log in is automatically assigned the **superuser** role
 2. Subsequent users must be approved and assigned roles by an admin
 
+### OIDC Group-to-Role Mapping
+
+Automatically assign roles based on OIDC group membership. This enables seamless integration with your identity provider's group management.
+
+#### Global Admin Groups
+
+Users in specified OIDC groups are automatically granted global admin access:
+
+```bash
+# backend/.env
+OIDC_ADMIN_GROUPS=admins,superusers,pulsar-admins
+```
+
+#### Configuration via Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OIDC_ROLE_CLAIM` | OIDC claim containing user groups | `groups` |
+| `OIDC_ADMIN_GROUPS` | Comma-separated list of admin groups | — |
+| `OIDC_SYNC_ROLES_ON_LOGIN` | Sync roles on every login | `true` |
+
+#### Configuration via UI
+
+Navigate to **Settings > OIDC Groups** to configure:
+
+1. **Role Claim** — The OIDC claim name containing user groups (e.g., `groups`, `roles`, `memberOf`)
+2. **Global Admin Groups** — OIDC groups that grant full admin access
+3. **Group-to-Role Mappings** — Map specific OIDC groups to Console roles
+
+Example mappings:
+- `developers` → `developer`
+- `operations` → `operator`
+- `platform-team` → `admin`
+
+#### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  User Login Flow with Group Mapping                         │
+│                                                             │
+│  1. User authenticates via OIDC provider                   │
+│  2. OIDC token contains groups claim:                      │
+│     { "groups": ["developers", "platform-team"] }          │
+│                                                             │
+│  3. Console checks group mappings:                         │
+│     - "developers" → assigns "developer" role              │
+│     - "platform-team" → assigns "admin" role               │
+│                                                             │
+│  4. If sync_roles_on_login is enabled:                     │
+│     - Roles not in current groups are removed              │
+│     - Ensures role assignments stay in sync with IdP       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### OIDC Provider Configuration
+
+**Keycloak:**
+- Enable "Full group path" in client mappers
+- Or configure a custom mapper for the `groups` claim
+
+**Zitadel:**
+- Groups are included automatically when configured in actions
+- Or use roles with custom claims
+
+**Auth0:**
+- Configure a post-login Action to add groups to tokens
+- Or use Auth0 Organizations for group management
+
 ---
 
 ## API Tokens
@@ -568,6 +636,9 @@ curl -H "Authorization: Bearer <token>" \
 | `OIDC_CLIENT_ID` | OAuth client ID | — |
 | `OIDC_CLIENT_SECRET` | OAuth client secret | — |
 | `OIDC_USE_PKCE` | Use PKCE flow | `true` |
+| `OIDC_ROLE_CLAIM` | OIDC claim containing user groups | `groups` |
+| `OIDC_ADMIN_GROUPS` | Groups that grant global admin (comma-separated) | — |
+| `OIDC_SYNC_ROLES_ON_LOGIN` | Sync roles from groups on login | `true` |
 | `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:5173` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 

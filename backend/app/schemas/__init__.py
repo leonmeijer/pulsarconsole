@@ -30,6 +30,10 @@ from app.schemas.environment import (
     EnvironmentTestRequest,
     EnvironmentTestResponse,
     EnvironmentUpdate,
+    GroupRoleMapping,
+    OIDCProviderCreate,
+    OIDCProviderResponse,
+    OIDCProviderUpdate,
 )
 from app.schemas.message import (
     BrowseMessagesRequest,
@@ -98,6 +102,11 @@ __all__ = [
     "EnvironmentTestRequest",
     "EnvironmentTestResponse",
     "EnvironmentUpdate",
+    # OIDC Provider
+    "GroupRoleMapping",
+    "OIDCProviderCreate",
+    "OIDCProviderResponse",
+    "OIDCProviderUpdate",
     # Tenant
     "TenantCreate",
     "TenantDetailResponse",

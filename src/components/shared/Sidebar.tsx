@@ -18,6 +18,7 @@ import {
     Shield,
     Monitor,
     Lock,
+    UserCog,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,6 +51,7 @@ const settingsItems = [
 const oidcAdminItems = [
     { icon: Shield, label: "Roles", path: "/settings/roles" },
     { icon: Users, label: "Users", path: "/settings/users" },
+    { icon: UserCog, label: "OIDC Groups", path: "/settings/oidc" },
 ];
 
 // Always visible for superusers (Pulsar broker config)

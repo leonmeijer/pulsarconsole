@@ -449,6 +449,20 @@ class PulsarAdminService:
         )
         return self._handle_response(response, "topic")
 
+    async def get_topic_internal_stats(self, topic: str) -> dict[str, Any]:
+        """Get topic internal statistics."""
+        # Parse topic name: persistent://tenant/namespace/topic
+        parts = topic.replace("://", "/").split("/")
+        if len(parts) != 4:
+            raise ValidationError(f"Invalid topic name: {topic}")
+
+        topic_type, tenant, namespace, topic_name = parts
+        response = await self._request(
+            "GET",
+            f"/admin/v2/{topic_type}/{tenant}/{namespace}/{topic_name}/internalStats",
+        )
+        return self._handle_response(response, "topic")
+
     async def create_topic(
         self,
         tenant: str,
@@ -744,118 +758,34 @@ class PulsarAdminService:
         return await self.get_brokers(cluster)
 
     async def get_broker_stats(self, broker_url: str | None = None) -> dict[str, Any]:
-        """Get broker stats from Prometheus metrics endpoint."""
+        """Get broker stats from load report endpoint.
+
+        Uses the broker-stats/load-report endpoint which provides message rates,
+        topic counts, and resource usage metrics.
+        """
         try:
-            client = await self._get_client()
-            # Follow redirects for /metrics
-            response = await client.get("/metrics", follow_redirects=True)
-            if response.status_code != 200:
-                return {}
+            # Get the load report which has all the stats we need
+            load_report = await self.get_broker_load_report()
 
-            metrics_text = response.text
+            # Extract stats from load report
             stats = {
-                'jvmHeapUsed': 0,
-                'jvmHeapMax': 0,
-                'directMemoryUsed': 0,
-                'msgRateIn': 0.0,
-                'msgRateOut': 0.0,
-                'numTopics': 0,
-                'numProducers': 0,
-                'numConsumers': 0,
-                'jvmThreads': 0,
-                'processCpuSeconds': 0.0,
+                'msgRateIn': load_report.get('msgRateIn', 0.0),
+                'msgRateOut': load_report.get('msgRateOut', 0.0),
+                'msgThroughputIn': load_report.get('msgThroughputIn', 0.0),
+                'msgThroughputOut': load_report.get('msgThroughputOut', 0.0),
+                'numTopics': load_report.get('numTopics', 0),
+                'numBundles': load_report.get('numBundles', 0),
+                'numProducers': load_report.get('numProducers', 0),
+                'numConsumers': load_report.get('numConsumers', 0),
+                'cpu': load_report.get('cpu', {'usage': 0}),
+                'memory': load_report.get('memory', {'usage': 0}),
+                'directMemory': load_report.get('directMemory', {'usage': 0}),
             }
-
-            # Parse relevant metrics
-            for line in metrics_text.split('\n'):
-                if line.startswith('#') or not line.strip():
-                    continue
-
-                try:
-                    # JVM Memory (heap used)
-                    if 'jvm_memory_bytes_used{' in line and 'area="heap"' in line:
-                        value = float(line.split()[-1])
-                        stats['jvmHeapUsed'] = value
-
-                    # JVM Memory (heap max)
-                    elif 'jvm_memory_bytes_max{' in line and 'area="heap"' in line:
-                        value = float(line.split()[-1])
-                        if value > 0:  # -1 means unlimited
-                            stats['jvmHeapMax'] = value
-
-                    # Direct memory
-                    elif line.startswith('jvm_memory_direct_bytes_used{'):
-                        value = float(line.split()[-1])
-                        stats['directMemoryUsed'] = value
-
-                    # JVM Threads
-                    elif line.startswith('jvm_threads_current{'):
-                        value = int(float(line.split()[-1]))
-                        stats['jvmThreads'] = value
-
-                    # Process CPU seconds (cumulative)
-                    elif line.startswith('process_cpu_seconds_total{'):
-                        value = float(line.split()[-1])
-                        stats['processCpuSeconds'] = value
-
-                    # Broker-level message rates
-                    elif line.startswith('pulsar_broker_rate_in{'):
-                        value = float(line.split()[-1])
-                        stats['msgRateIn'] = value
-
-                    elif line.startswith('pulsar_broker_rate_out{'):
-                        value = float(line.split()[-1])
-                        stats['msgRateOut'] = value
-
-                    # Broker counts
-                    elif line.startswith('pulsar_broker_topics_count{'):
-                        value = int(float(line.split()[-1]))
-                        stats['numTopics'] = value
-
-                    elif line.startswith('pulsar_broker_producers_count{'):
-                        value = int(float(line.split()[-1]))
-                        stats['numProducers'] = value
-
-                    elif line.startswith('pulsar_broker_consumers_count{'):
-                        value = int(float(line.split()[-1]))
-                        stats['numConsumers'] = value
-
-                except (ValueError, IndexError):
-                    continue
-
-            # Calculate memory percentage
-            if stats['jvmHeapMax'] > 0:
-                stats['memory'] = {'usage': (stats['jvmHeapUsed'] / stats['jvmHeapMax']) * 100}
-            else:
-                stats['memory'] = {'usage': 0}
-
-            # Try to get actual CPU from load report
-            try:
-                load_report = await self.get_broker_load_report()
-                cpu_data = load_report.get('cpu', {})
-                stats['cpu'] = {'usage': cpu_data.get('usage', 0)}
-
-                # Also get direct memory from load report if available
-                direct_memory_data = load_report.get('directMemory', {})
-                if direct_memory_data:
-                    stats['directMemory'] = {'usage': direct_memory_data.get('usage', 0)}
-                else:
-                    # Fallback: Direct memory as percentage (assume 2GB limit if not known)
-                    direct_mem = stats.get('directMemoryUsed', 0)
-                    direct_limit = 2 * 1024 * 1024 * 1024  # 2GB default
-                    stats['directMemory'] = {'usage': (direct_mem / direct_limit) * 100 if direct_limit > 0 else 0}
-            except Exception:
-                # Fallback: mark CPU as unavailable
-                stats['cpu'] = {'usage': 0, 'unavailable': True}
-                # Fallback: Direct memory as percentage (assume 2GB limit if not known)
-                direct_mem = stats.get('directMemoryUsed', 0)
-                direct_limit = 2 * 1024 * 1024 * 1024  # 2GB default
-                stats['directMemory'] = {'usage': (direct_mem / direct_limit) * 100 if direct_limit > 0 else 0}
 
             return stats
 
         except Exception as e:
-            logger.warning("Failed to get broker stats from metrics", error=str(e))
+            logger.warning("Failed to get broker stats from load report", error=str(e))
             return {}
 
     async def get_owned_namespaces(self, broker_url: str, cluster: str = "standalone") -> list[str]:
@@ -1190,6 +1120,21 @@ class PulsarAdminService:
         response = await self._request(
             "PUT",
             f"/admin/v2/{topic_type}/{tenant}/{namespace}/{topic}/offload",
+        )
+        self._handle_response(response, "topic")
+
+    async def truncate_topic(
+        self,
+        tenant: str,
+        namespace: str,
+        topic: str,
+        persistent: bool = True,
+    ) -> None:
+        """Truncate a topic (delete all messages)."""
+        topic_type = "persistent" if persistent else "non-persistent"
+        response = await self._request(
+            "DELETE",
+            f"/admin/v2/{topic_type}/{tenant}/{namespace}/{topic}/truncate",
         )
         self._handle_response(response, "topic")
 

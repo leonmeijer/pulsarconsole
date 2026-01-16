@@ -11,7 +11,7 @@ export function useRealtimeSync() {
     const queryClient = useQueryClient();
     const { isAuthenticated } = useAuth();
     const socketRef = useRef<WebSocket | null>(null);
-    const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!isAuthenticated) {

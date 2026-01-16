@@ -236,3 +236,29 @@ async def offload_topic(
     )
 
     return SuccessResponse(message=f"Offload triggered for topic '{topic}'")
+
+
+@router.post("/{topic}/truncate", response_model=SuccessResponse)
+async def truncate_topic(
+    tenant: str,
+    namespace: str,
+    topic: str,
+    _user: CurrentApprovedUser,
+    service: TopicSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
+    persistent: bool = Query(default=True, description="Persistent topic"),
+) -> SuccessResponse:
+    """Truncate a topic (delete all messages)."""
+    await service.truncate_topic(tenant, namespace, topic, persistent=persistent)
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_event(
+        action="truncate",
+        resource_type=ResourceType.TOPIC,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}",
+        **request_info,
+    )
+
+    return SuccessResponse(message=f"Topic '{topic}' truncated")

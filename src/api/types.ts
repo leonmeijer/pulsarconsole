@@ -32,6 +32,56 @@ export interface OIDCProvider {
   login_url?: string;
 }
 
+// OIDC Provider Configuration (for admin settings)
+export interface OIDCProviderConfig {
+  id: string;
+  environment_id: string;
+  issuer_url: string;
+  client_id: string;
+  has_client_secret: boolean;
+  use_pkce: boolean;
+  scopes: string[];
+  role_claim: string;
+  auto_create_users: boolean;
+  default_role_name: string | null;
+  group_role_mappings: Record<string, string> | null;
+  admin_groups: string[] | null;
+  sync_roles_on_login: boolean;
+  is_enabled: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  is_global: boolean;  // True if this is from global env vars, not database
+}
+
+export interface OIDCProviderConfigCreate {
+  issuer_url: string;
+  client_id: string;
+  client_secret?: string;
+  use_pkce?: boolean;
+  scopes?: string[];
+  role_claim?: string;
+  auto_create_users?: boolean;
+  default_role_name?: string;
+  group_role_mappings?: Record<string, string>;
+  admin_groups?: string[];
+  sync_roles_on_login?: boolean;
+}
+
+export interface OIDCProviderConfigUpdate {
+  issuer_url?: string;
+  client_id?: string;
+  client_secret?: string;
+  use_pkce?: boolean;
+  scopes?: string[];
+  role_claim?: string;
+  auto_create_users?: boolean;
+  default_role_name?: string;
+  group_role_mappings?: Record<string, string>;
+  admin_groups?: string[];
+  sync_roles_on_login?: boolean;
+  is_enabled?: boolean;
+}
+
 export interface ProvidersResponse {
   providers: OIDCProvider[];
   auth_required: boolean;
@@ -213,6 +263,8 @@ export interface Tenant {
   total_backlog: number;
   msg_rate_in: number;
   msg_rate_out: number;
+  msg_throughput_in: number;
+  msg_throughput_out: number;
 }
 
 export interface TenantDetail extends Tenant {
@@ -417,6 +469,14 @@ export interface Message {
 export interface BrowseMessagesResponse {
   topic: string;
   subscription: string;
+  messages: Message[];
+  message_count: number;
+  rate_limit_remaining: number;
+}
+
+export interface ExamineMessagesResponse {
+  topic: string;
+  initial_position: string;
   messages: Message[];
   message_count: number;
   rate_limit_remaining: number;

@@ -40,10 +40,18 @@ class MessageBrowserService:
 
     def decode_message_payload(
         self,
-        payload: bytes | str,
+        payload: bytes | str | dict | list,
         encoding: str = "utf-8",
     ) -> dict[str, Any]:
         """Decode message payload and return decoded content with metadata."""
+        # Already parsed JSON (dict or list)
+        if isinstance(payload, (dict, list)):
+            return {
+                "type": "json",
+                "content": payload,
+                "raw": json.dumps(payload),
+            }
+
         if isinstance(payload, str):
             # Already a string, try to parse as JSON
             try:

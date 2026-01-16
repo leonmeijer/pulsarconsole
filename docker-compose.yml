@@ -1,5 +1,3 @@
-version: '3.8'
-
 # =============================================================================
 # Pulsar Console - Development Environment
 # =============================================================================
@@ -21,7 +19,7 @@ services:
       POSTGRES_PASSWORD: pulsar
       POSTGRES_DB: pulsar_console
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -53,35 +51,6 @@ services:
       - pulsar-console
 
   # ==========================================================================
-  # Apache Pulsar (Standalone mode for development)
-  # ==========================================================================
-  pulsar:
-    image: apachepulsar/pulsar:3.3.2
-    container_name: pulsar-console-pulsar
-    command: bin/pulsar standalone
-    ports:
-      - "6650:6650"   # Pulsar binary protocol
-      - "8080:8080"   # Pulsar Admin REST API
-    environment:
-      PULSAR_MEM: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
-      # ========================================================================
-      # Authentication & Authorization (disabled for local dev)
-      # ========================================================================
-      authenticationEnabled: "false"
-      authorizationEnabled: "false"
-    volumes:
-      - pulsar_data:/pulsar/data
-    healthcheck:
-      test: ["CMD", "curl", "-s", "-f", "http://localhost:8080/admin/v2/brokers/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - pulsar-console
-
-  # ==========================================================================
   # Database Migrations (runs once at startup)
   # ==========================================================================
   migrate:
@@ -91,6 +60,7 @@ services:
     container_name: pulsar-console-migrate
     entrypoint: ["alembic", "upgrade", "head"]
     environment:
+      # Use internal docker network hostname for postgres
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
     depends_on:
       postgres:
@@ -111,33 +81,21 @@ services:
     entrypoint: []
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
     ports:
-      - "8000:8000"
+      - "8001:8000"
+    env_file:
+      - .env
     environment:
-      - APP_NAME=pulsar-console
-      - APP_ENV=development
-      - DEBUG=true
-      # OIDC Configuration
-      - OIDC_ENABLED=true
-      - OIDC_USE_PKCE=true
-      - OIDC_ISSUER_URL=https://netbird.lvms.nl
-      - OIDC_CLIENT_ID=352915667466387460
-      # Database & Cache
+      # Override with docker-internal hostnames
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
-      - PULSAR_ADMIN_URL=http://pulsar:8080
-      - PULSAR_SERVICE_URL=pulsar://pulsar:6650
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - ENCRYPTION_KEY=dev-encryption-key-change-in-prod
     depends_on:
       migrate:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      pulsar:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -160,23 +118,20 @@ services:
     container_name: pulsar-console-worker
     entrypoint: []
     command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
+    env_file:
+      - .env
     environment:
-      - APP_ENV=development
+      # Override with docker-internal hostnames
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
-      - PULSAR_ADMIN_URL=http://pulsar:8080
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - ENCRYPTION_KEY=dev-encryption-key-change-in-prod
     depends_on:
       migrate:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      pulsar:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -194,8 +149,10 @@ services:
     container_name: pulsar-console-beat
     entrypoint: []
     command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
+    env_file:
+      - .env
     environment:
-      - APP_ENV=development
+      # Override with docker-internal hostnames
       - DATABASE_URL=postgresql+asyncpg://pulsar:pulsar@postgres:5432/pulsar_console
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
@@ -229,7 +186,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  pulsar_data:
 
 networks:
   pulsar-console:

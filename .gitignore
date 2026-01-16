@@ -53,3 +53,6 @@ pulsar-conf/zitadel-key.json
 pulsar-conf/*.json
 pulsar-conf/admin-token.txt
 pulsar-conf/private.key
+
+# Local dev scripts
+run-docker-dev.sh

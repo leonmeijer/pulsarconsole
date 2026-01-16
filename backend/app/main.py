@@ -44,6 +44,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Failed to initialize database", error=str(e))
         raise
 
+    # Auto-provision default environment from env variables if none exist
+    if settings.pulsar_auto_provision:
+        try:
+            from app.core.database import async_session_factory
+            from app.services.environment import EnvironmentService
+            from app.models.environment import AuthMode
+
+            async with async_session_factory() as session:
+                env_service = EnvironmentService(session)
+                existing = await env_service.get_all_environments()
+
+                if not existing:
+                    # Determine auth mode based on token presence
+                    auth_mode = AuthMode.token if settings.pulsar_auth_token else AuthMode.none
+
+                    # Create default environment from settings
+                    env_name = settings.pulsar_cluster or "default"
+                    logger.info(
+                        "Auto-provisioning default environment from settings",
+                        name=env_name,
+                        admin_url=settings.pulsar_admin_url,
+                        auth_mode=auth_mode.value,
+                    )
+
+                    await env_service.create_environment(
+                        name=env_name,
+                        admin_url=settings.pulsar_admin_url,
+                        auth_mode=auth_mode,
+                        token=settings.pulsar_auth_token,
+                        validate_connectivity=False,  # Don't block startup on connectivity
+                        is_shared=True,
+                        created_by_id=None,  # System-created
+                    )
+                    await session.commit()
+                    logger.info("Default environment created successfully", name=env_name)
+                else:
+                    logger.debug("Environments already exist, skipping auto-provision")
+        except Exception as e:
+            logger.warning("Failed to auto-provision default environment", error=str(e))
+
     # Seed default permissions and roles
     try:
         from app.core.database import async_session_factory

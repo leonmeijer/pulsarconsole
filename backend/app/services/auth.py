@@ -278,6 +278,7 @@ class AuthService:
         code_verifier: str | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
+        environment_id: UUID | None = None,
     ) -> tuple[User, TokenPair, Session]:
         """
         Complete OIDC authentication flow.
@@ -289,6 +290,7 @@ class AuthService:
             code_verifier: PKCE code verifier (required if PKCE was used)
             ip_address: Client IP address
             user_agent: Client user agent
+            environment_id: Environment ID for provider-specific group mappings
 
         Returns:
             Tuple of (user, token_pair, session)
@@ -302,6 +304,22 @@ class AuthService:
         userinfo = await self.get_userinfo(
             oidc_config, tokens["access_token"]
         )
+
+        # Extract groups from userinfo using the configured role claim
+        groups = self._extract_groups(userinfo, oidc_config.role_claim)
+        logger.debug(
+            "Extracted OIDC groups",
+            groups=groups,
+            role_claim=oidc_config.role_claim,
+        )
+
+        # Get the OIDC provider for group mapping configuration
+        provider: OIDCProvider | None = None
+        if environment_id:
+            provider = await self.oidc_provider_repo.get_for_environment(environment_id)
+
+        # Check if user should be global admin based on group membership
+        is_admin_from_groups = self._check_admin_groups(groups, provider)
 
         # Find or create user
         user, created, is_first_user = await self.user_repo.find_or_create_from_oidc(
@@ -324,6 +342,26 @@ class AuthService:
             from app.services.seed import SeedService
             seed_service = SeedService(self.db)
             await seed_service.assign_user_to_superuser_role_all_environments(user.id)
+        else:
+            # Apply group-based admin status
+            if is_admin_from_groups and not user.is_global_admin:
+                user.is_global_admin = True
+                logger.info(
+                    "User granted global admin from OIDC group membership",
+                    user_id=str(user.id),
+                    email=user.email,
+                    groups=groups,
+                )
+            elif not is_admin_from_groups and user.is_global_admin and not is_first_user:
+                # Only revoke if sync is enabled and user was not first user
+                should_sync = self._should_sync_roles(provider)
+                if should_sync:
+                    # Check if user was the very first user (they keep admin)
+                    # We don't revoke admin from first user
+                    pass  # Don't revoke from users who got admin via first-user logic
+
+            # Apply group-to-role mappings
+            await self._apply_group_role_mappings(user, groups, provider)
 
         # Create session
         token_pair, session = await self.create_session(
@@ -336,6 +374,168 @@ class AuthService:
         await self.db.commit()
 
         return user, token_pair, session
+
+    def _extract_groups(self, userinfo: dict[str, Any], role_claim: str) -> list[str]:
+        """Extract groups from OIDC userinfo using the configured claim."""
+        groups = userinfo.get(role_claim, [])
+        if isinstance(groups, str):
+            # Handle single group as string
+            groups = [groups]
+        elif not isinstance(groups, list):
+            groups = []
+        return [str(g) for g in groups]
+
+    def _check_admin_groups(
+        self, groups: list[str], provider: OIDCProvider | None
+    ) -> bool:
+        """Check if any of the user's groups grant global admin access."""
+        # Check global admin groups from environment variables
+        global_admin_groups = settings.oidc_admin_groups_list
+        if global_admin_groups:
+            for group in groups:
+                if group in global_admin_groups:
+                    logger.debug(
+                        "User in global admin group (from env)",
+                        group=group,
+                    )
+                    return True
+
+        # Check provider-specific admin groups
+        if provider and provider.admin_groups:
+            for group in groups:
+                if group in provider.admin_groups:
+                    logger.debug(
+                        "User in admin group (from provider)",
+                        group=group,
+                        provider_id=str(provider.id),
+                    )
+                    return True
+
+        return False
+
+    def _should_sync_roles(self, provider: OIDCProvider | None) -> bool:
+        """Determine if roles should be synced on login."""
+        # Check provider-specific setting first
+        if provider is not None:
+            return provider.sync_roles_on_login
+        # Fall back to global setting
+        return settings.oidc_sync_roles_on_login
+
+    async def _apply_group_role_mappings(
+        self,
+        user: User,
+        groups: list[str],
+        provider: OIDCProvider | None,
+    ) -> None:
+        """Apply group-to-role mappings for the user."""
+        if not provider or not provider.group_role_mappings:
+            return
+
+        from sqlalchemy import select, delete
+        from app.models.role import Role
+        from app.models.user_role import UserRole
+
+        # Get the environment ID from the provider
+        environment_id = provider.environment_id
+
+        # Find roles that match the user's groups
+        target_role_names: set[str] = set()
+        for group in groups:
+            if group in provider.group_role_mappings:
+                role_name = provider.group_role_mappings[group]
+                target_role_names.add(role_name)
+                logger.debug(
+                    "Group mapped to role",
+                    group=group,
+                    role_name=role_name,
+                )
+
+        # Also add default role if configured
+        if provider.default_role_name:
+            target_role_names.add(provider.default_role_name)
+
+        if not target_role_names:
+            # If sync is enabled and no roles matched, remove all roles for this environment
+            if provider.sync_roles_on_login:
+                await self._remove_user_roles_for_environment(user.id, environment_id)
+            return
+
+        # Get role IDs for the target roles
+        result = await self.db.execute(
+            select(Role).where(
+                Role.environment_id == environment_id,
+                Role.name.in_(target_role_names),
+            )
+        )
+        target_roles = {role.name: role for role in result.scalars().all()}
+
+        # Get current user roles for this environment
+        result = await self.db.execute(
+            select(UserRole).join(Role).where(
+                UserRole.user_id == user.id,
+                Role.environment_id == environment_id,
+            )
+        )
+        current_user_roles = list(result.scalars().all())
+        current_role_ids = {ur.role_id for ur in current_user_roles}
+
+        # Add missing roles
+        for role_name, role in target_roles.items():
+            if role.id not in current_role_ids:
+                new_user_role = UserRole(
+                    user_id=user.id,
+                    role_id=role.id,
+                    assigned_by=None,  # System-assigned via OIDC
+                )
+                self.db.add(new_user_role)
+                logger.info(
+                    "Assigned role to user from OIDC group",
+                    user_id=str(user.id),
+                    role_name=role_name,
+                    environment_id=str(environment_id),
+                )
+
+        # Remove roles not in target set (if sync is enabled)
+        if provider.sync_roles_on_login:
+            target_role_ids = {role.id for role in target_roles.values()}
+            for user_role in current_user_roles:
+                if user_role.role_id not in target_role_ids:
+                    await self.db.delete(user_role)
+                    logger.info(
+                        "Removed role from user (not in OIDC groups)",
+                        user_id=str(user.id),
+                        role_id=str(user_role.role_id),
+                        environment_id=str(environment_id),
+                    )
+
+        await self.db.flush()
+
+    async def _remove_user_roles_for_environment(
+        self, user_id: UUID, environment_id: UUID
+    ) -> None:
+        """Remove all roles for a user in a specific environment."""
+        from sqlalchemy import select, delete
+        from app.models.role import Role
+        from app.models.user_role import UserRole
+
+        # Get role IDs for this environment
+        result = await self.db.execute(
+            select(Role.id).where(Role.environment_id == environment_id)
+        )
+        env_role_ids = [row[0] for row in result.all()]
+
+        if env_role_ids:
+            await self.db.execute(
+                delete(UserRole).where(
+                    UserRole.user_id == user_id,
+                    UserRole.role_id.in_(env_role_ids),
+                )
+            )
+            logger.info(
+                "Removed all roles for user in environment (no OIDC groups matched)",
+                user_id=str(user_id),
+                environment_id=str(environment_id),
+            )
 
     # =========================================================================
     # Session Management

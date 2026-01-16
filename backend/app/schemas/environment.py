@@ -129,3 +129,91 @@ class EnvironmentTestResponse(BaseSchema):
     success: bool
     message: str
     latency_ms: float | None = None
+
+
+# =============================================================================
+# OIDC Provider Configuration Schemas
+# =============================================================================
+
+
+class GroupRoleMapping(BaseSchema):
+    """Mapping of an OIDC group to an internal role."""
+
+    oidc_group: str = Field(..., description="OIDC group name")
+    role_name: str = Field(..., description="Internal role name to assign")
+
+
+class OIDCProviderCreate(BaseSchema):
+    """Schema for creating an OIDC provider configuration."""
+
+    issuer_url: str = Field(..., description="OIDC issuer URL")
+    client_id: str = Field(..., description="OIDC client ID")
+    client_secret: str | None = Field(default=None, description="OIDC client secret (optional with PKCE)")
+    use_pkce: bool = Field(default=True, description="Use PKCE for enhanced security")
+    scopes: list[str] = Field(default=["openid", "profile", "email"], description="OIDC scopes to request")
+    role_claim: str = Field(default="groups", description="Claim name containing user groups")
+    auto_create_users: bool = Field(default=True, description="Auto-create users on first login")
+    default_role_name: str | None = Field(default=None, description="Default role for new users")
+    group_role_mappings: dict[str, str] | None = Field(
+        default=None,
+        description="Mapping of OIDC groups to role names (e.g., {'developers': 'operator'})",
+    )
+    admin_groups: list[str] | None = Field(
+        default=None,
+        description="OIDC groups that grant global admin access",
+    )
+    sync_roles_on_login: bool = Field(
+        default=True,
+        description="Sync roles from OIDC groups on every login",
+    )
+
+
+class OIDCProviderUpdate(BaseSchema):
+    """Schema for updating an OIDC provider configuration."""
+
+    issuer_url: str | None = Field(default=None, description="OIDC issuer URL")
+    client_id: str | None = Field(default=None, description="OIDC client ID")
+    client_secret: str | None = Field(default=None, description="OIDC client secret")
+    use_pkce: bool | None = Field(default=None, description="Use PKCE for enhanced security")
+    scopes: list[str] | None = Field(default=None, description="OIDC scopes to request")
+    role_claim: str | None = Field(default=None, description="Claim name containing user groups")
+    auto_create_users: bool | None = Field(default=None, description="Auto-create users on first login")
+    default_role_name: str | None = Field(default=None, description="Default role for new users")
+    group_role_mappings: dict[str, str] | None = Field(
+        default=None,
+        description="Mapping of OIDC groups to role names",
+    )
+    admin_groups: list[str] | None = Field(
+        default=None,
+        description="OIDC groups that grant global admin access",
+    )
+    sync_roles_on_login: bool | None = Field(
+        default=None,
+        description="Sync roles from OIDC groups on every login",
+    )
+    is_enabled: bool | None = Field(default=None, description="Enable/disable OIDC provider")
+
+
+class OIDCProviderResponse(BaseSchema):
+    """Response schema for OIDC provider configuration."""
+
+    id: str | UUID  # Can be UUID or string (for virtual providers)
+    environment_id: UUID
+    issuer_url: str
+    client_id: str
+    has_client_secret: bool = Field(description="Whether client secret is configured")
+    use_pkce: bool
+    scopes: list[str]
+    role_claim: str
+    auto_create_users: bool
+    default_role_name: str | None
+    group_role_mappings: dict[str, str] | None
+    admin_groups: list[str] | None
+    sync_roles_on_login: bool
+    is_enabled: bool
+    created_at: datetime | None = None  # None for virtual providers from global config
+    updated_at: datetime | None = None
+    is_global: bool = Field(
+        default=False,
+        description="Whether this provider config is from global environment variables",
+    )
