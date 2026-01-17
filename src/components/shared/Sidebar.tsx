@@ -57,6 +57,7 @@ const oidcAdminItems = [
 // Always visible for superusers (Pulsar broker config)
 const pulsarAdminItems = [
     { icon: Lock, label: "Pulsar Auth", path: "/settings/pulsar-auth" },
+    { icon: Bell, label: "Notification Channels", path: "/settings/notification-channels" },
 ];
 
 export default function Sidebar() {

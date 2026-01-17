@@ -1581,3 +1581,90 @@ export function useUpdateThemePreference() {
     },
   });
 }
+
+// =============================================================================
+// Notification Channel Hooks
+// =============================================================================
+
+import type {
+  NotificationChannel,
+  NotificationChannelCreate,
+  NotificationChannelUpdate,
+  NotificationChannelListResponse,
+  TestChannelResponse,
+} from './types';
+
+export const notificationChannelKeys = {
+  all: ['notification-channels'] as const,
+  detail: (id: string) => ['notification-channels', id] as const,
+};
+
+export function useNotificationChannels() {
+  return useQuery<NotificationChannel[]>({
+    queryKey: notificationChannelKeys.all,
+    queryFn: async () => {
+      const { data } = await api.get<NotificationChannelListResponse>('/api/v1/notification-channels');
+      return data.channels;
+    },
+  });
+}
+
+export function useNotificationChannel(id: string) {
+  return useQuery<NotificationChannel>({
+    queryKey: notificationChannelKeys.detail(id),
+    queryFn: async () => {
+      const { data } = await api.get<NotificationChannel>(`/api/v1/notification-channels/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateNotificationChannel() {
+  const queryClient = useQueryClient();
+  return useMutation<NotificationChannel, Error, NotificationChannelCreate>({
+    mutationFn: async (channel) => {
+      const { data } = await api.post<NotificationChannel>('/api/v1/notification-channels', channel);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationChannelKeys.all });
+    },
+  });
+}
+
+export function useUpdateNotificationChannel() {
+  const queryClient = useQueryClient();
+  return useMutation<NotificationChannel, Error, { id: string; data: NotificationChannelUpdate }>({
+    mutationFn: async ({ id, data: updateData }) => {
+      const { data } = await api.put<NotificationChannel>(`/api/v1/notification-channels/${id}`, updateData);
+      return data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: notificationChannelKeys.all });
+      queryClient.invalidateQueries({ queryKey: notificationChannelKeys.detail(id) });
+    },
+  });
+}
+
+export function useDeleteNotificationChannel() {
+  const queryClient = useQueryClient();
+  return useMutation<SuccessResponse, Error, string>({
+    mutationFn: async (id) => {
+      const { data } = await api.delete<SuccessResponse>(`/api/v1/notification-channels/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationChannelKeys.all });
+    },
+  });
+}
+
+export function useTestNotificationChannel() {
+  return useMutation<TestChannelResponse, Error, string>({
+    mutationFn: async (id) => {
+      const { data } = await api.post<TestChannelResponse>(`/api/v1/notification-channels/${id}/test`);
+      return data;
+    },
+  });
+}

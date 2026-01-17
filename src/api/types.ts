@@ -615,3 +615,96 @@ export interface TopTopic {
   backlog: number;
   storage_size: number;
 }
+
+// =============================================================================
+// Notification Channel Types
+// =============================================================================
+
+export type NotificationChannelType = 'email' | 'slack' | 'webhook';
+
+export interface EmailConfig {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user?: string;
+  smtp_password?: string;
+  smtp_use_tls: boolean;
+  from_address: string;
+  from_name: string;
+  recipients: string[];
+}
+
+export interface SlackConfig {
+  webhook_url: string;
+  channel?: string;
+  username: string;
+  icon_emoji: string;
+}
+
+export interface WebhookConfig {
+  url: string;
+  method: 'POST' | 'PUT';
+  headers?: Record<string, string>;
+  include_metadata: boolean;
+  timeout_seconds: number;
+}
+
+export type NotificationChannelConfig = EmailConfig | SlackConfig | WebhookConfig;
+
+export interface NotificationChannel {
+  id: string;
+  name: string;
+  channel_type: NotificationChannelType;
+  is_enabled: boolean;
+  severity_filter: NotificationSeverity[] | null;
+  type_filter: NotificationType[] | null;
+  config: Record<string, unknown>;
+  created_by_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationChannelCreate {
+  name: string;
+  channel_type: NotificationChannelType;
+  is_enabled?: boolean;
+  severity_filter?: NotificationSeverity[] | null;
+  type_filter?: NotificationType[] | null;
+  config: EmailConfig | SlackConfig | WebhookConfig;
+}
+
+export interface NotificationChannelUpdate {
+  name?: string;
+  is_enabled?: boolean;
+  severity_filter?: NotificationSeverity[] | null;
+  type_filter?: NotificationType[] | null;
+  config?: EmailConfig | SlackConfig | WebhookConfig;
+}
+
+export interface NotificationChannelListResponse {
+  channels: NotificationChannel[];
+  total: number;
+}
+
+export interface NotificationDelivery {
+  id: string;
+  notification_id: string;
+  channel_id: string;
+  channel_name: string;
+  channel_type: string;
+  status: 'pending' | 'sent' | 'failed';
+  attempts: number;
+  last_attempt_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface NotificationDeliveryListResponse {
+  deliveries: NotificationDelivery[];
+  total: number;
+}
+
+export interface TestChannelResponse {
+  success: boolean;
+  message: string;
+  latency_ms: number | null;
+}
