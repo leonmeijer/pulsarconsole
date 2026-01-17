@@ -51,10 +51,9 @@ jobs:
             type=ref,event=pr
             # Tag with git short sha
             type=sha,prefix=
-            # Tag with semver (v1.0.0 -> 1.0.0, latest)
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            # Tag with semver (v1.0.0 -> v1.0.0)
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
 
       - name: Build and push Backend image
         uses: docker/build-push-action@v5
@@ -102,10 +101,9 @@ jobs:
             type=ref,event=pr
             # Tag with git short sha
             type=sha,prefix=
-            # Tag with semver (v1.0.0 -> 1.0.0, latest)
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            # Tag with semver (v1.0.0 -> v1.0.0)
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
 
       - name: Build and push Frontend image
         uses: docker/build-push-action@v5
