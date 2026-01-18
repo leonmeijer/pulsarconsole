@@ -438,7 +438,7 @@ export default function NotificationChannelsPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="glass rounded-xl p-6 w-full max-w-lg border border-white/10 max-h-[90vh] overflow-y-auto"
+              className="modal-solid rounded-xl p-6 w-full max-w-lg border border-white/10 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-semibold mb-4">

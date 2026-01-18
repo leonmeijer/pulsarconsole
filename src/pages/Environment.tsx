@@ -314,7 +314,7 @@ export default function EnvironmentPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="glass p-6 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                            className="modal-solid p-6 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="p-3 bg-primary/10 rounded-xl">
@@ -540,7 +540,7 @@ export default function EnvironmentPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="glass p-6 rounded-2xl max-w-md w-full"
+                            className="modal-solid p-6 rounded-2xl max-w-md w-full"
                         >
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-3 bg-red-500/10 rounded-xl">

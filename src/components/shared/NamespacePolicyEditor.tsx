@@ -69,7 +69,7 @@ export default function NamespacePolicyEditor({
                         className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="glass rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="modal-solid rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                             {/* Header */}
                             <div className="flex items-center justify-between p-6 border-b border-white/10">
                                 <div>

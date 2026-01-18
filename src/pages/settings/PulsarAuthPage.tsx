@@ -98,7 +98,7 @@ function AuthGuideModal({ open, onClose }: { open: boolean; onClose: () => void 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-popover border border-white/10 rounded-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col glass"
+            className="modal-solid border border-white/10 rounded-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="p-6 border-b border-white/10 flex items-center justify-between flex-shrink-0">

@@ -65,7 +65,7 @@ export function TopicPartitionEditor({
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={() => onOpenChange(false)}
             />
-            <div className="relative w-full max-w-md mx-4 glass rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative w-full max-w-md mx-4 modal-solid rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">

@@ -100,6 +100,11 @@ body {
   border: 1px solid var(--glass-border);
 }
 
+/* Solid modal background - no transparency */
+.modal-solid {
+  background: var(--popover);
+}
+
 /* Premium gradient button */
 .btn-premium {
   background: linear-gradient(135deg, var(--primary), var(--secondary));

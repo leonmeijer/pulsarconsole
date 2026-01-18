@@ -251,7 +251,7 @@ export default function PermissionEditor({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="glass rounded-xl p-6 w-full max-w-md border border-white/10"
+              className="modal-solid rounded-xl p-6 w-full max-w-md border border-white/10"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-semibold mb-4">Grant Permission</h2>

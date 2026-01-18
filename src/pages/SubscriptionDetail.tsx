@@ -633,7 +633,7 @@ export default function SubscriptionDetailPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="glass p-6 rounded-2xl w-full max-w-md mx-4"
+                        className="modal-solid p-6 rounded-2xl w-full max-w-md mx-4"
                     >
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <SkipForward size={20} />
@@ -682,7 +682,7 @@ export default function SubscriptionDetailPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="glass p-6 rounded-2xl w-full max-w-md mx-4"
+                        className="modal-solid p-6 rounded-2xl w-full max-w-md mx-4"
                     >
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Clock size={20} />
