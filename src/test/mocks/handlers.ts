@@ -231,14 +231,74 @@ export const mockTokenStats = {
     revoked: 0,
 };
 
+export const mockNotificationChannels = [
+    {
+        id: 'channel-1',
+        name: 'Ops Team Email',
+        channel_type: 'email' as const,
+        is_enabled: true,
+        severity_filter: ['warning', 'critical'] as const[],
+        type_filter: null,
+        config: {
+            smtp_host: 'smtp.example.com',
+            smtp_port: 587,
+            smtp_use_tls: true,
+            from_address: 'alerts@example.com',
+            from_name: 'Pulsar Console',
+            recipients: ['ops@example.com', 'admin@example.com'],
+        },
+        created_by_id: 'user-1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z',
+    },
+    {
+        id: 'channel-2',
+        name: 'Dev Slack',
+        channel_type: 'slack' as const,
+        is_enabled: true,
+        severity_filter: null,
+        type_filter: ['error', 'broker_health'] as const[],
+        config: {
+            webhook_url: 'https://hooks.slack.com/services/xxx',
+            channel: '#alerts',
+            username: 'Pulsar Bot',
+            icon_emoji: ':bell:',
+        },
+        created_by_id: 'user-1',
+        created_at: '2024-01-05T00:00:00Z',
+        updated_at: '2024-01-10T08:00:00Z',
+    },
+    {
+        id: 'channel-3',
+        name: 'PagerDuty Webhook',
+        channel_type: 'webhook' as const,
+        is_enabled: false,
+        severity_filter: ['critical'] as const[],
+        type_filter: null,
+        config: {
+            url: 'https://events.pagerduty.com/v2/enqueue',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            include_metadata: true,
+            timeout_seconds: 30,
+        },
+        created_by_id: 'user-2',
+        created_at: '2024-01-10T00:00:00Z',
+        updated_at: '2024-01-10T00:00:00Z',
+    },
+];
+
+// Base URL for API - matches all environments
+const API_BASE = '*/api/v1';
+
 // API Handlers
 export const handlers = [
     // Environment
-    http.get('/api/v1/environment', () => {
+    http.get(`${API_BASE}/environment`, () => {
         return HttpResponse.json(mockEnvironment);
     }),
 
-    http.post('/api/v1/environment', async ({ request }) => {
+    http.post(`${API_BASE}/environment`, async ({ request }) => {
         const body = await request.json();
         return HttpResponse.json({
             id: 'new-env',
@@ -248,7 +308,7 @@ export const handlers = [
         });
     }),
 
-    http.post('/api/v1/environment/test', () => {
+    http.post(`${API_BASE}/environment/test`, () => {
         return HttpResponse.json({
             success: true,
             message: 'Connection successful',
@@ -257,14 +317,14 @@ export const handlers = [
     }),
 
     // Tenants
-    http.get('/api/v1/tenants', () => {
+    http.get(`${API_BASE}/tenants`, () => {
         return HttpResponse.json({
             tenants: mockTenants,
             total: mockTenants.length,
         });
     }),
 
-    http.get('/api/v1/tenants/:name', ({ params }) => {
+    http.get(`${API_BASE}/tenants/:name`, ({ params }) => {
         const tenant = mockTenants.find((t) => t.name === params.name);
         if (!tenant) {
             return new HttpResponse(null, { status: 404 });
@@ -276,7 +336,7 @@ export const handlers = [
         });
     }),
 
-    http.post('/api/v1/tenants', async ({ request }) => {
+    http.post(`${API_BASE}/tenants`, async ({ request }) => {
         const body = await request.json();
         return HttpResponse.json({
             name: body.name,
@@ -290,19 +350,19 @@ export const handlers = [
         });
     }),
 
-    http.delete('/api/v1/tenants/:name', () => {
+    http.delete(`${API_BASE}/tenants/:name`, () => {
         return HttpResponse.json({ success: true, message: 'Tenant deleted' });
     }),
 
     // Namespaces
-    http.get('/api/v1/tenants/:tenant/namespaces', () => {
+    http.get(`${API_BASE}/tenants/:tenant/namespaces`, () => {
         return HttpResponse.json({
             namespaces: mockNamespaces,
             total: mockNamespaces.length,
         });
     }),
 
-    http.get('/api/v1/tenants/:tenant/namespaces/:namespace', ({ params }) => {
+    http.get(`${API_BASE}/tenants/:tenant/namespaces/:namespace`, ({ params }) => {
         const ns = mockNamespaces.find((n) => n.namespace === params.namespace);
         if (!ns) {
             return new HttpResponse(null, { status: 404 });
@@ -314,7 +374,7 @@ export const handlers = [
         });
     }),
 
-    http.post('/api/v1/tenants/:tenant/namespaces', async ({ request, params }) => {
+    http.post(`${API_BASE}/tenants/:tenant/namespaces`, async ({ request, params }) => {
         const body = await request.json();
         return HttpResponse.json({
             tenant: params.tenant,
@@ -329,19 +389,19 @@ export const handlers = [
         });
     }),
 
-    http.delete('/api/v1/tenants/:tenant/namespaces/:namespace', () => {
+    http.delete(`${API_BASE}/tenants/:tenant/namespaces/:namespace`, () => {
         return HttpResponse.json({ success: true, message: 'Namespace deleted' });
     }),
 
     // Topics
-    http.get('/api/v1/tenants/:tenant/namespaces/:namespace/topics', () => {
+    http.get(`${API_BASE}/tenants/:tenant/namespaces/:namespace/topics`, () => {
         return HttpResponse.json({
             topics: mockTopics,
             total: mockTopics.length,
         });
     }),
 
-    http.get('/api/v1/tenants/:tenant/namespaces/:namespace/topics/:topic', ({ params }) => {
+    http.get(`${API_BASE}/tenants/:tenant/namespaces/:namespace/topics/:topic`, ({ params }) => {
         const topic = mockTopics.find((t) => t.name === params.topic);
         if (!topic) {
             return new HttpResponse(null, { status: 404 });
@@ -379,7 +439,7 @@ export const handlers = [
         });
     }),
 
-    http.post('/api/v1/tenants/:tenant/namespaces/:namespace/topics', async ({ request, params }) => {
+    http.post(`${API_BASE}/tenants/:tenant/namespaces/:namespace/topics`, async ({ request, params }) => {
         const body = await request.json();
         return HttpResponse.json({
             tenant: params.tenant,
@@ -396,31 +456,31 @@ export const handlers = [
         });
     }),
 
-    http.delete('/api/v1/tenants/:tenant/namespaces/:namespace/topics/:topic', () => {
+    http.delete(`${API_BASE}/tenants/:tenant/namespaces/:namespace/topics/:topic`, () => {
         return HttpResponse.json({ success: true, message: 'Topic deleted' });
     }),
 
     // Subscriptions
-    http.get('/api/v1/tenants/:tenant/namespaces/:namespace/topics/:topic/subscriptions', () => {
+    http.get(`${API_BASE}/tenants/:tenant/namespaces/:namespace/topics/:topic/subscriptions`, () => {
         return HttpResponse.json({
             subscriptions: mockSubscriptions,
             total: mockSubscriptions.length,
         });
     }),
 
-    http.post('/api/v1/tenants/:tenant/namespaces/:namespace/topics/:topic/subscriptions/:sub/skip-all', () => {
+    http.post(`${API_BASE}/tenants/:tenant/namespaces/:namespace/topics/:topic/subscriptions/:sub/skip-all`, () => {
         return HttpResponse.json({ success: true, message: 'Messages skipped' });
     }),
 
     // Brokers
-    http.get('/api/v1/brokers', () => {
+    http.get(`${API_BASE}/brokers`, () => {
         return HttpResponse.json({
             brokers: mockBrokers,
             total: mockBrokers.length,
         });
     }),
 
-    http.get('/api/v1/brokers/cluster', () => {
+    http.get(`${API_BASE}/brokers/cluster`, () => {
         return HttpResponse.json({
             clusters: ['standalone'],
             broker_count: mockBrokers.length,
@@ -434,7 +494,7 @@ export const handlers = [
     }),
 
     // Audit
-    http.get('/api/v1/audit/events', () => {
+    http.get(`${API_BASE}/audit/events`, () => {
         return HttpResponse.json({
             events: mockAuditEvents,
             total: mockAuditEvents.length,
@@ -442,32 +502,32 @@ export const handlers = [
     }),
 
     // Auth
-    http.get('/api/v1/auth/providers', () => {
+    http.get(`${API_BASE}/auth/providers`, () => {
         return HttpResponse.json({
             providers: [],
             auth_required: false,
         });
     }),
 
-    http.get('/api/v1/auth/me', () => {
+    http.get(`${API_BASE}/auth/me`, () => {
         return HttpResponse.json(mockCurrentUser);
     }),
 
-    http.post('/api/v1/auth/logout', () => {
+    http.post(`${API_BASE}/auth/logout`, () => {
         return HttpResponse.json({ success: true });
     }),
 
     // Sessions
-    http.get('/api/v1/auth/sessions', () => {
+    http.get(`${API_BASE}/auth/sessions`, () => {
         return HttpResponse.json({ sessions: mockSessions });
     }),
 
-    http.delete('/api/v1/auth/sessions/:id', () => {
+    http.delete(`${API_BASE}/auth/sessions/:id`, () => {
         return HttpResponse.json({ success: true, message: 'Session revoked' });
     }),
 
     // Permissions
-    http.get('/api/v1/rbac/permissions', () => {
+    http.get(`${API_BASE}/rbac/permissions`, () => {
         // Group permissions by action like the backend does
         const grouped: Record<string, typeof mockPermissions> = {};
         for (const perm of mockPermissions) {
@@ -479,13 +539,13 @@ export const handlers = [
         return HttpResponse.json({ permissions: grouped });
     }),
 
-    http.get('/api/v1/rbac/user/permissions', () => {
+    http.get(`${API_BASE}/rbac/user/permissions`, () => {
         return HttpResponse.json({
             permissions: [mockPermissions[0], mockPermissions[3], mockPermissions[4]],
         });
     }),
 
-    http.post('/api/v1/rbac/check', async ({ request }) => {
+    http.post(`${API_BASE}/rbac/check`, async ({ request }) => {
         const body = await request.json() as { action: string; resource_level: string; resource_path?: string };
         // Simulate permission check - allow 'read' for everything
         const allowed = body.action === 'read' ||
@@ -495,11 +555,11 @@ export const handlers = [
     }),
 
     // Roles
-    http.get('/api/v1/rbac/roles', () => {
+    http.get(`${API_BASE}/rbac/roles`, () => {
         return HttpResponse.json({ roles: mockRoles });
     }),
 
-    http.post('/api/v1/rbac/roles', async ({ request }) => {
+    http.post(`${API_BASE}/rbac/roles`, async ({ request }) => {
         const body = await request.json() as { name: string; description?: string };
         return HttpResponse.json({
             id: 'new-role',
@@ -512,7 +572,7 @@ export const handlers = [
         });
     }),
 
-    http.put('/api/v1/rbac/roles/:id', async ({ request, params }) => {
+    http.put(`${API_BASE}/rbac/roles/:id`, async ({ request, params }) => {
         const body = await request.json() as { name?: string; description?: string };
         const role = mockRoles.find((r) => r.id === params.id);
         return HttpResponse.json({
@@ -521,41 +581,41 @@ export const handlers = [
         });
     }),
 
-    http.delete('/api/v1/rbac/roles/:id', () => {
+    http.delete(`${API_BASE}/rbac/roles/:id`, () => {
         return HttpResponse.json({ success: true, message: 'Role deleted' });
     }),
 
-    http.post('/api/v1/rbac/roles/:roleId/permissions/:permId', () => {
+    http.post(`${API_BASE}/rbac/roles/:roleId/permissions/:permId`, () => {
         return HttpResponse.json({ success: true, message: 'Permission added' });
     }),
 
-    http.delete('/api/v1/rbac/roles/:roleId/permissions/:permId', () => {
+    http.delete(`${API_BASE}/rbac/roles/:roleId/permissions/:permId`, () => {
         return HttpResponse.json({ success: true, message: 'Permission removed' });
     }),
 
     // Users (RBAC)
-    http.get('/api/v1/rbac/users', () => {
+    http.get(`${API_BASE}/rbac/users`, () => {
         return HttpResponse.json({ users: mockUsers });
     }),
 
-    http.post('/api/v1/rbac/users/:userId/roles/:roleId', () => {
+    http.post(`${API_BASE}/rbac/users/:userId/roles/:roleId`, () => {
         return HttpResponse.json({ success: true, message: 'Role assigned' });
     }),
 
-    http.delete('/api/v1/rbac/users/:userId/roles/:roleId', () => {
+    http.delete(`${API_BASE}/rbac/users/:userId/roles/:roleId`, () => {
         return HttpResponse.json({ success: true, message: 'Role revoked' });
     }),
 
     // API Tokens
-    http.get('/api/v1/tokens', () => {
+    http.get(`${API_BASE}/tokens`, () => {
         return HttpResponse.json({ tokens: mockApiTokens });
     }),
 
-    http.get('/api/v1/tokens/stats', () => {
+    http.get(`${API_BASE}/tokens/stats`, () => {
         return HttpResponse.json(mockTokenStats);
     }),
 
-    http.post('/api/v1/tokens', async ({ request }) => {
+    http.post(`${API_BASE}/tokens`, async ({ request }) => {
         const body = await request.json() as { name: string; scopes?: string[]; expires_at?: string };
         return HttpResponse.json({
             id: 'new-token',
@@ -568,19 +628,19 @@ export const handlers = [
         });
     }),
 
-    http.delete('/api/v1/tokens/:id', () => {
+    http.delete(`${API_BASE}/tokens/:id`, () => {
         return HttpResponse.json({ success: true, message: 'Token revoked' });
     }),
 
     // Pulsar Token generation
-    http.get('/api/v1/tokens/pulsar/capability', () => {
+    http.get(`${API_BASE}/tokens/pulsar/capability`, () => {
         return HttpResponse.json({
             can_generate: true,
             reason: null,
         });
     }),
 
-    http.post('/api/v1/tokens/pulsar', async ({ request }) => {
+    http.post(`${API_BASE}/tokens/pulsar`, async ({ request }) => {
         const body = await request.json() as { subject: string; expires_in_days?: number };
         return HttpResponse.json({
             token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
@@ -588,6 +648,49 @@ export const handlers = [
             expires_at: body.expires_in_days
                 ? new Date(Date.now() + body.expires_in_days * 24 * 60 * 60 * 1000).toISOString()
                 : null,
+        });
+    }),
+
+    // Notification Channels
+    http.get(`${API_BASE}/notification-channels`, () => {
+        return HttpResponse.json({ channels: mockNotificationChannels, total: mockNotificationChannels.length });
+    }),
+
+    http.post(`${API_BASE}/notification-channels`, async ({ request }) => {
+        const body = await request.json() as { name: string; channel_type: string; config: unknown };
+        return HttpResponse.json({
+            id: 'new-channel',
+            name: body.name,
+            channel_type: body.channel_type,
+            is_enabled: true,
+            severity_filter: null,
+            type_filter: null,
+            config: body.config,
+            created_by_id: 'user-1',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        });
+    }),
+
+    http.put(`${API_BASE}/notification-channels/:id`, async ({ request, params }) => {
+        const body = await request.json() as { name?: string; is_enabled?: boolean };
+        const channel = mockNotificationChannels.find((c) => c.id === params.id);
+        return HttpResponse.json({
+            ...channel,
+            ...body,
+            updated_at: new Date().toISOString(),
+        });
+    }),
+
+    http.delete(`${API_BASE}/notification-channels/:id`, () => {
+        return HttpResponse.json({ success: true, message: 'Channel deleted' });
+    }),
+
+    http.post(`${API_BASE}/notification-channels/:id/test`, () => {
+        return HttpResponse.json({
+            success: true,
+            message: 'Test notification sent',
+            latency_ms: 125,
         });
     }),
 ];
