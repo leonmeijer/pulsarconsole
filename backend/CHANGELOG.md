@@ -9,10 +9,6 @@
 * add endpoint to revoke all other sessions for the current user ([c24821e](https://github.com/leonmeijer/pulsarconsole/commit/c24821e163739daeac7569257b10c4b4c4f723ed))
 * add environment data to Dashboard component ([b802b48](https://github.com/leonmeijer/pulsarconsole/commit/b802b488b10c434acda1164164551786d4945a24))
 * add notification channels (email, slack, webhook) ([189c417](https://github.com/leonmeijer/pulsarconsole/commit/189c417f29946c6df5f72ff9ac4959be9fef1be2))
-* add notification channels management and tests ([5c93ec3](https://github.com/leonmeijer/pulsarconsole/commit/5c93ec3d668f00be41ece3e8543d2dbbbd4c6795))
-* add notification channels settings UI ([36ef0d4](https://github.com/leonmeijer/pulsarconsole/commit/36ef0d43bf36b4470c24af62f83bba960679df30))
-* add release-please for automated releases ([e40484f](https://github.com/leonmeijer/pulsarconsole/commit/e40484fea1d75a7e6563c6fc9cff082efbee2fea))
-* add release-please for automated releases ([1510e7a](https://github.com/leonmeijer/pulsarconsole/commit/1510e7adf3d55a89619e014980b7f6e3355eb47e))
 * enhance theme preference management and UI updates ([9e51f59](https://github.com/leonmeijer/pulsarconsole/commit/9e51f59ad67019a14ca2b9790eaf9c1cd0255160))
 * enhance theme preference management and UI updates ([2880c24](https://github.com/leonmeijer/pulsarconsole/commit/2880c24f9a9a7df8ae442633b67eb4af5c4960ef))
 * implement OIDC support and enhance user management ([cbe42a9](https://github.com/leonmeijer/pulsarconsole/commit/cbe42a940315de947ca558ca9ca214f6c056abc8))
@@ -25,24 +21,6 @@
 ### Bug Fixes
 
 * add debug output and fix Dockerfile casing ([e296518](https://github.com/leonmeijer/pulsarconsole/commit/e2965187f4fc26664dc453f1c0e6b916da60029d))
-* add Docker Hub login to avoid rate limits ([0ff7d26](https://github.com/leonmeijer/pulsarconsole/commit/0ff7d26221630618ad1fb7bad03443ba26afb29d))
 * improve PR with security, bug fixes, and performance ([26fbbcb](https://github.com/leonmeijer/pulsarconsole/commit/26fbbcb9ab2cf31cb612b8f77219c7f1341828f6))
 * make database migrations idempotent for enum types ([088fb53](https://github.com/leonmeijer/pulsarconsole/commit/088fb53b105148cce0f9edaec73b714461cb924a))
 * set is_global_admin=True for dev user when OIDC disabled ([88b20cf](https://github.com/leonmeijer/pulsarconsole/commit/88b20cf18fd990b844df70206bd0e2d53fa0a55e))
-* use solid background for modal dialogs ([b6fc687](https://github.com/leonmeijer/pulsarconsole/commit/b6fc687801e6533edd1b0e5fb45d48fd0da22d5b))
-
-## [0.1.0](https://github.com/leonmeijer/pulsarconsole/releases/tag/v0.1.0) (2026-01-19)
-
-Initial release with semantic versioning.
-
-### Features
-
-- Modern React 19 frontend with Vite and TypeScript
-- FastAPI backend with async PostgreSQL support
-- OIDC authentication with group-to-role mapping
-- Role-based access control (RBAC)
-- WebSocket live updates for real-time data
-- Multi-platform Docker images (linux/amd64, linux/arm64)
-- Pulsar cluster management dashboard
-- Topic and subscription monitoring
-- Message inspection and publishing

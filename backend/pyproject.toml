@@ -1,6 +1,6 @@
 [project]
 name = "pulsar-console-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Modern Pulsar Console API - FastAPI backend"
 requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
