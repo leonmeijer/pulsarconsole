@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   release:
@@ -72,3 +73,10 @@ jobs:
           body_path: changelog.txt
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: true
+
+  build:
+    needs: release
+    uses: ./.github/workflows/build-and-publish.yml
+    permissions:
+      contents: read
+      packages: write
