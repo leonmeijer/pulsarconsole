@@ -79,6 +79,12 @@ export default function TopicsPage() {
         return `${rate.toFixed(1)}/s`;
     };
 
+    const formatCount = (count: number) => {
+        if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+        if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+        return `${count}`;
+    };
+
 
     return (
         <div className="space-y-8">
@@ -263,10 +269,33 @@ export default function TopicsPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                            {/* Msg rate bar */}
+                            <div className="mt-4 bg-white/5 rounded-lg p-2">
+                                <div className="flex items-center justify-between text-xs mb-1.5">
+                                    <span className="text-green-400">{formatRate(topic.msg_rate_in)} in</span>
+                                    <span className="text-muted-foreground">msg/s</span>
+                                    <span className="text-blue-400">{formatRate(topic.msg_rate_out)} out</span>
+                                </div>
+                                <div className="flex h-1.5 rounded-full overflow-hidden bg-white/5 gap-px">
+                                    <div
+                                        className="bg-green-500/70 rounded-l-full transition-all duration-500"
+                                        style={{ flex: topic.msg_rate_in || 1 }}
+                                    />
+                                    <div
+                                        className="bg-blue-500/70 rounded-r-full transition-all duration-500"
+                                        style={{ flex: topic.msg_rate_out || 1 }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                                 <div className="bg-white/5 rounded-lg p-2">
-                                    <div className="text-muted-foreground text-xs">Msg In</div>
-                                    <div className="font-semibold">{formatRate(topic.msg_rate_in)}</div>
+                                    <div className="text-muted-foreground text-xs">Total Msgs</div>
+                                    <div className="font-semibold">{formatCount(topic.msg_in_counter)}</div>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-2">
+                                    <div className="text-muted-foreground text-xs">Unacked</div>
+                                    <div className="font-semibold text-orange-400">{formatCount(topic.msg_backlog)}</div>
                                 </div>
                                 <div className="bg-white/5 rounded-lg p-2">
                                     <div className="text-muted-foreground text-xs">Storage</div>
@@ -274,10 +303,7 @@ export default function TopicsPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-4">
-                                <div className="text-xs text-muted-foreground">
-                                    Backlog: {formatBytes(topic.backlog_size)}
-                                </div>
+                            <div className="mt-4 flex items-center justify-end border-t border-white/5 pt-4">
                                 <Link
                                     to={`/tenants/${tenant}/namespaces/${namespace}/topics/${topic.name}`}
                                     className="flex items-center gap-1 text-primary text-sm font-semibold hover:underline"

@@ -80,10 +80,17 @@ class TopicService:
         """
         try:
             live_stats = await self.pulsar.get_topic_stats(full_name)
+            subscriptions = live_stats.get("subscriptions", {})
+            msg_backlog = sum(
+                sub.get("msgBacklog", 0) for sub in subscriptions.values()
+            )
             return {
                 "full_name": full_name,
                 "producer_count": len(live_stats.get("publishers", [])),
-                "subscription_count": len(live_stats.get("subscriptions", {})),
+                "subscription_count": len(subscriptions),
+                "msg_in_counter": live_stats.get("msgInCounter", 0),
+                "msg_out_counter": live_stats.get("msgOutCounter", 0),
+                "msg_backlog": msg_backlog,
             }
         except Exception as e:
             logger.debug(
@@ -95,6 +102,9 @@ class TopicService:
                 "full_name": full_name,
                 "producer_count": 0,
                 "subscription_count": 0,
+                "msg_in_counter": 0,
+                "msg_out_counter": 0,
+                "msg_backlog": 0,
             }
 
     async def _fetch_topic_stats_batch(
@@ -184,6 +194,9 @@ class TopicService:
                 "msg_throughput_out": stats.msg_throughput_out if stats else 0,
                 "storage_size": stats.storage_size if stats else 0,
                 "backlog_size": stats.backlog_size if stats else 0,
+                "msg_in_counter": live_stats.get("msg_in_counter", 0),
+                "msg_out_counter": live_stats.get("msg_out_counter", 0),
+                "msg_backlog": live_stats.get("msg_backlog", 0),
             }
 
             topics.append(topic_data)
@@ -219,12 +232,19 @@ class TopicService:
         # Get subscriptions
         subscriptions = []
         for sub_name, sub_stats in stats.get("subscriptions", {}).items():
+            consumers = sub_stats.get("consumers", [])
+            unacked = sum(c.get("unackedMessages", 0) for c in consumers)
             subscriptions.append({
                 "name": sub_name,
                 "type": sub_stats.get("type", "Exclusive"),
                 "msg_backlog": sub_stats.get("msgBacklog", 0),
+                "backlog_size": sub_stats.get("backlogSize", 0),
                 "msg_rate_out": sub_stats.get("msgRateOut", 0),
-                "consumer_count": len(sub_stats.get("consumers", [])),
+                "msg_throughput_out": sub_stats.get("msgThroughputOut", 0),
+                "consumer_count": len(consumers),
+                "unacked_messages": unacked,
+                "msg_rate_redeliver": sub_stats.get("msgRateRedeliver", 0),
+                "is_blocked": sub_stats.get("blockedSubscriptionOnUnackedMsgs", False),
             })
 
         # Get producers
@@ -252,6 +272,14 @@ class TopicService:
                 "average_msg_size": stats.get("averageMsgSize", 0),
                 "storage_size": stats.get("storageSize", 0),
                 "backlog_size": stats.get("backlogSize", 0),
+                "msg_in_counter": stats.get("msgInCounter", 0),
+                "msg_out_counter": stats.get("msgOutCounter", 0),
+                "msg_backlog": sum(
+                    sub.get("msgBacklog", 0)
+                    for sub in stats.get("subscriptions", {}).values()
+                ),
+                "bytes_in_counter": stats.get("bytesInCounter", 0),
+                "bytes_out_counter": stats.get("bytesOutCounter", 0),
             },
             "internal_stats": {
                 "entries_added_counter": internal_stats.get("entriesAddedCounter", 0),

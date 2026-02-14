@@ -115,6 +115,9 @@ class Settings(BaseSettings):
     oidc_client_id: str | None = Field(default=None)
     oidc_client_secret: str | None = Field(default=None)  # Optional when using PKCE
     oidc_use_pkce: bool = Field(default=True)  # Use PKCE by default (recommended)
+    # Comma-separated OIDC scopes (default: "openid,profile,email")
+    # Add "groups" when using group-based role mapping
+    oidc_scopes: str | None = Field(default=None)
 
     # OIDC Group Mapping (Global defaults)
     # Claim name in OIDC token containing user groups (e.g., "groups", "roles")
@@ -124,6 +127,11 @@ class Settings(BaseSettings):
     oidc_admin_groups: str | None = Field(default=None)
     # Whether to sync roles from OIDC groups on every login (removes roles not in groups)
     oidc_sync_roles_on_login: bool = Field(default=True)
+    # JSON mapping of OIDC group names to role names (applied to all environments)
+    # e.g., '{"developers":"operator","viewers":"viewer","admins":"superuser"}'
+    oidc_group_role_mappings: str | None = Field(default=None)
+    # Default role to assign to any authenticated OIDC user (e.g., "viewer")
+    oidc_default_role: str | None = Field(default=None)
 
     # -------------------------------------------------------------------------
     # Session Settings
@@ -190,11 +198,37 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
+    def oidc_scopes_list(self) -> list[str]:
+        """Parse OIDC scopes from comma-separated string, with smart defaults."""
+        if self.oidc_scopes:
+            return [s.strip() for s in self.oidc_scopes.split(",") if s.strip()]
+        # Default scopes — auto-include "groups" when group mappings or admin groups are configured
+        scopes = ["openid", "profile", "email"]
+        if self.oidc_admin_groups or self.oidc_group_role_mappings:
+            scopes.append("groups")
+        return scopes
+
+    @computed_field
+    @property
     def oidc_admin_groups_list(self) -> list[str]:
         """Parse OIDC admin groups from comma-separated string."""
         if not self.oidc_admin_groups:
             return []
         return [g.strip() for g in self.oidc_admin_groups.split(",") if g.strip()]
+
+    @computed_field
+    @property
+    def oidc_group_role_mappings_dict(self) -> dict[str, str]:
+        """Parse OIDC group-role mappings from JSON string."""
+        if not self.oidc_group_role_mappings:
+            return {}
+        try:
+            result = json.loads(self.oidc_group_role_mappings)
+            if isinstance(result, dict):
+                return {str(k): str(v) for k, v in result.items()}
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return {}
 
     @model_validator(mode="after")
     def resolve_bws_secrets(self) -> "Settings":

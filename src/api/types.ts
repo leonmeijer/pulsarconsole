@@ -322,6 +322,9 @@ export interface Topic {
   backlog_size: number;
   msg_rate_in: number;
   msg_rate_out: number;
+  msg_in_counter: number;
+  msg_out_counter: number;
+  msg_backlog: number;
 }
 
 export interface TopicStats {
@@ -332,6 +335,11 @@ export interface TopicStats {
   average_msg_size: number;
   storage_size: number;
   backlog_size: number;
+  msg_in_counter: number;
+  msg_out_counter: number;
+  msg_backlog: number;
+  bytes_in_counter: number;
+  bytes_out_counter: number;
 }
 
 export interface ProducerInfo {
@@ -346,8 +354,13 @@ export interface SubscriptionInfo {
   name: string;
   type: string;
   msg_backlog: number;
+  backlog_size: number;
   msg_rate_out: number;
+  msg_throughput_out: number;
   consumer_count: number;
+  unacked_messages: number;
+  msg_rate_redeliver: number;
+  is_blocked: boolean;
 }
 
 export interface TopicDetail {
@@ -394,12 +407,15 @@ export interface Subscription {
   topic: string;
   type: string;
   msg_backlog: number;
+  backlog_size: number;
   msg_rate_out: number;
   msg_throughput_out: number;
   msg_rate_expired: number;
+  msg_rate_redeliver: number;
   unacked_messages: number;
   consumer_count: number;
   is_durable: boolean;
+  is_blocked: boolean;
   replicated: boolean;
 }
 

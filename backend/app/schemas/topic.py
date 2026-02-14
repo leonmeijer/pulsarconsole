@@ -11,6 +11,11 @@ class TopicStats(StatsBase):
     average_msg_size: float = 0
     storage_size: int = 0
     backlog_size: int = 0
+    msg_in_counter: int = 0
+    msg_out_counter: int = 0
+    msg_backlog: int = 0
+    bytes_in_counter: int = 0
+    bytes_out_counter: int = 0
 
 
 class TopicInternalStats(BaseSchema):
@@ -39,8 +44,13 @@ class SubscriptionInfo(BaseSchema):
     name: str
     type: str = "Exclusive"
     msg_backlog: int = 0
+    backlog_size: int = 0
     msg_rate_out: float = 0
+    msg_throughput_out: float = 0
     consumer_count: int = 0
+    unacked_messages: int = 0
+    msg_rate_redeliver: float = 0
+    is_blocked: bool = False
 
 
 class TopicBase(BaseSchema):
@@ -69,6 +79,9 @@ class TopicResponse(TopicBase, StatsBase):
     subscription_count: int = 0
     storage_size: int = 0
     backlog_size: int = 0
+    msg_in_counter: int = 0
+    msg_out_counter: int = 0
+    msg_backlog: int = 0
 
 
 class TopicDetailResponse(TopicBase):

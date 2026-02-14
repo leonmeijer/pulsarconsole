@@ -68,6 +68,6 @@ patches:
 # Use production images
 images:
   - name: ghcr.io/leonmeijer/pulsar-console-api
-    newTag: v1.0.0
+    newTag: latest
   - name: ghcr.io/leonmeijer/pulsar-console-frontend
-    newTag: v1.0.0
+    newTag: latest

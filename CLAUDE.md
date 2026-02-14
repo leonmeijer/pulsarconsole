@@ -1,32 +1,32 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+Web management console for Apache Pulsar.
 
-## Project Overview
+## Stack
 
-PulsarConsole is a modern web-based management console for Apache Pulsar.
+- **Frontend** (`/`): React 19, Vite, TypeScript, Tailwind 4, Radix UI, TanStack Query, Vitest
+- **Backend** (`/backend`): FastAPI, SQLAlchemy (async + Postgres), Redis, Celery, Alembic
 
-## Structure
-
-- `/` - React 19 frontend (Vite + TypeScript)
-- `/backend` - FastAPI backend (Python 3.12)
-
-## Development
+## Commands
 
 ```bash
-# Frontend
-npm install
-npm run dev
-
-# Backend
-cd backend
-pip install -e ".[dev]"
-uvicorn app.main:app --reload
+# Use Makefile — run `make help` for full list
+make dev-install    # backend deps
+npm install         # frontend deps
+make run            # backend (port 8000)
+make run-frontend   # frontend (Vite dev server)
+make docker-up      # postgres, redis, pulsar
+make test           # backend tests (pytest)
+npm run test:run    # frontend tests (vitest)
+make lint           # ruff + mypy
+npm run lint        # eslint
+make format         # ruff format + fix
+make migrate        # alembic upgrade head
 ```
 
-## Versioning
+## Code Style
 
-This project uses [release-please](https://github.com/googleapis/release-please) for automated semantic versioning.
-
-- Use conventional commits: `feat:`, `fix:`, `chore:`, etc.
-- Releases are automated via GitHub Actions
+- **Python**: ruff (line-length 100), mypy strict, isort via ruff
+- **TypeScript**: eslint, strict TS config
+- Conventional commits: `feat:`, `fix:`, `chore:`, etc.
+- Releases via [release-please](https://github.com/googleapis/release-please) GitHub Action

@@ -38,6 +38,7 @@ show_help() {
     echo "  ps                 Show running containers"
     echo "  stop               Stop all containers"
     echo "  clean              Stop and remove containers, volumes"
+    echo "  reset-db           Drop and recreate the database"
     echo ""
     echo -e "${YELLOW}Testing & Quality:${NC}"
     echo "  test               Run pytest"
@@ -204,6 +205,13 @@ clean_all() {
     docker compose --profile full down -v
 }
 
+reset_db() {
+    echo -e "${YELLOW}Resetting database...${NC}"
+    docker compose exec -T postgres dropdb -U pulsar --if-exists pulsar_console
+    docker compose exec -T postgres createdb -U pulsar pulsar_console
+    echo -e "${GREEN}Database reset! Run migrations:${NC} ./run-docker-dev.sh migrate"
+}
+
 # ============================================================================
 # TESTING & QUALITY COMMANDS
 # ============================================================================
@@ -269,6 +277,9 @@ case "${1:-help}" in
         ;;
     clean)
         clean_all
+        ;;
+    reset-db)
+        reset_db
         ;;
 
     # Testing & quality

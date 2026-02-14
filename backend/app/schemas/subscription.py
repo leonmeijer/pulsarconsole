@@ -43,12 +43,15 @@ class SubscriptionResponse(SubscriptionBase):
     topic: str
     type: str = "Exclusive"
     msg_backlog: int = 0
+    backlog_size: int = 0
     msg_rate_out: float = 0
     msg_throughput_out: float = 0
     msg_rate_expired: float = 0
+    msg_rate_redeliver: float = 0
     unacked_messages: int = 0
     consumer_count: int = 0
     is_durable: bool = True
+    is_blocked: bool = False
     replicated: bool = False
 
 

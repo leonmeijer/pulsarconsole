@@ -4,7 +4,6 @@ import {
     ArrowLeft,
     Send,
     Database,
-    Activity,
     Eye,
     ExternalLink,
     ChevronDown,
@@ -22,6 +21,11 @@ import {
     Eraser,
     Pause,
     Play,
+    Hash,
+    Inbox,
+    ArrowDownUp,
+    Ruler,
+    AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
@@ -39,6 +43,12 @@ function formatRate(rate: number): string {
     if (rate >= 1000000) return `${(rate / 1000000).toFixed(1)}M/s`;
     if (rate >= 1000) return `${(rate / 1000).toFixed(1)}K/s`;
     return `${rate.toFixed(1)}/s`;
+}
+
+function formatCount(count: number): string {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return `${count}`;
 }
 
 
@@ -526,20 +536,82 @@ export default function TopicDetailPage() {
                 <div className="glass h-48 rounded-2xl animate-pulse" />
             ) : topicData && (
                 <>
+                    {/* Throughput Bar */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="glass p-5 rounded-xl"
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <ArrowDownUp size={18} className="text-muted-foreground" />
+                                <span className="text-sm font-medium">Message Throughput</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                                Avg size: {topicData.stats.average_msg_size >= 1024
+                                    ? formatBytes(topicData.stats.average_msg_size)
+                                    : `${topicData.stats.average_msg_size.toFixed(0)} B`}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6 mb-3">
+                            <div>
+                                <div className="flex items-center justify-between text-sm mb-1">
+                                    <span className="text-green-400 font-medium">Inbound</span>
+                                    <span className="text-muted-foreground">{formatBytes(topicData.stats.msg_throughput_in)}/s</span>
+                                </div>
+                                <div className="text-2xl font-bold text-green-400">{formatRate(topicData.stats.msg_rate_in)}</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="flex items-center justify-between text-sm mb-1">
+                                    <span className="text-muted-foreground">{formatBytes(topicData.stats.msg_throughput_out)}/s</span>
+                                    <span className="text-blue-400 font-medium">Outbound</span>
+                                </div>
+                                <div className="text-2xl font-bold text-blue-400">{formatRate(topicData.stats.msg_rate_out)}</div>
+                            </div>
+                        </div>
+                        <div className="flex h-2 rounded-full overflow-hidden bg-white/5 gap-px">
+                            <div
+                                className="bg-green-500/60 rounded-l-full transition-all duration-500"
+                                style={{ flex: topicData.stats.msg_rate_in || 1 }}
+                            />
+                            <div
+                                className="bg-blue-500/60 rounded-r-full transition-all duration-500"
+                                style={{ flex: topicData.stats.msg_rate_out || 1 }}
+                            />
+                        </div>
+                    </motion.div>
+
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="glass p-4 rounded-xl"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-500/10 rounded-lg">
-                                    <Activity size={20} className="text-green-500" />
+                                <div className="p-2 bg-teal-500/10 rounded-lg">
+                                    <Hash size={20} className="text-teal-500" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Msg In</div>
-                                    <div className="text-xl font-bold">{formatRate(topicData.stats.msg_rate_in)}</div>
+                                    <div className="text-sm text-muted-foreground">Total Msgs In</div>
+                                    <div className="text-xl font-bold">{formatCount(topicData.stats.msg_in_counter)}</div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.05 }}
+                            className="glass p-4 rounded-xl"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                    <Hash size={20} className="text-blue-500" />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-muted-foreground">Total Msgs Out</div>
+                                    <div className="text-xl font-bold">{formatCount(topicData.stats.msg_out_counter)}</div>
                                 </div>
                             </div>
                         </motion.div>
@@ -548,23 +620,6 @@ export default function TopicDetailPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="glass p-4 rounded-xl"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-500/10 rounded-lg">
-                                    <Activity size={20} className="text-blue-500" />
-                                </div>
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Msg Out</div>
-                                    <div className="text-xl font-bold">{formatRate(topicData.stats.msg_rate_out)}</div>
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
                             className="glass p-4 rounded-xl"
                         >
                             <div className="flex items-center gap-3">
@@ -581,7 +636,7 @@ export default function TopicDetailPage() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
+                            transition={{ delay: 0.15 }}
                             className="glass p-4 rounded-xl"
                         >
                             <div className="flex items-center gap-3">
@@ -589,7 +644,7 @@ export default function TopicDetailPage() {
                                     <Send size={20} className="text-orange-500" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-muted-foreground">Backlog Size</div>
+                                    <div className="text-sm text-muted-foreground">Backlog (bytes)</div>
                                     <div className="text-xl font-bold">{formatBytes(topicData.stats.backlog_size)}</div>
                                 </div>
                             </div>
@@ -598,7 +653,47 @@ export default function TopicDetailPage() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
+                            transition={{ delay: 0.2 }}
+                            className="glass p-4 rounded-xl"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-500/10 rounded-lg">
+                                    <Inbox size={20} className="text-red-500" />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-muted-foreground">Unacked Msgs</div>
+                                    <div className={cn("text-xl font-bold", topicData.stats.msg_backlog > 0 && "text-orange-400")}>
+                                        {formatCount(topicData.stats.msg_backlog)}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.25 }}
+                            className="glass p-4 rounded-xl"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                    <Ruler size={20} className="text-indigo-500" />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-muted-foreground">Avg Msg Size</div>
+                                    <div className="text-xl font-bold">
+                                        {topicData.stats.average_msg_size >= 1024
+                                            ? formatBytes(topicData.stats.average_msg_size)
+                                            : `${topicData.stats.average_msg_size.toFixed(0)} B`}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
                             className="glass p-4 rounded-xl cursor-pointer hover:border-primary/50 transition-colors"
                             onClick={() => setShowPartitionEditor(true)}
                         >
@@ -726,7 +821,7 @@ export default function TopicDetailPage() {
                                 No subscriptions
                             </div>
                         ) : (
-                            <div className="glass rounded-xl overflow-hidden">
+                            <div className="glass rounded-xl overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-white/5">
                                         <tr>
@@ -734,32 +829,46 @@ export default function TopicDetailPage() {
                                             <th className="text-left p-4 text-sm font-semibold">Name</th>
                                             <th className="text-left p-4 text-sm font-semibold">Type</th>
                                             <th className="text-right p-4 text-sm font-semibold">Consumers</th>
-                                            <th className="text-right p-4 text-sm font-semibold">Backlog</th>
+                                            <th className="text-right p-4 text-sm font-semibold">Backlog (msgs)</th>
+                                            <th className="text-right p-4 text-sm font-semibold">Backlog (bytes)</th>
+                                            <th className="text-right p-4 text-sm font-semibold">Unacked</th>
                                             <th className="text-right p-4 text-sm font-semibold">Msg Rate</th>
+                                            <th className="text-right p-4 text-sm font-semibold">Throughput</th>
+                                            <th className="text-right p-4 text-sm font-semibold">Redeliver</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {subscriptions.map((sub) => (
-                                            <tr key={sub.name} className="border-t border-white/5 hover:bg-white/5 group">
+                                            <tr key={sub.name} className={cn(
+                                                "border-t border-white/5 hover:bg-white/5 group",
+                                                sub.is_blocked && "bg-red-500/5"
+                                            )}>
                                                 <td className="p-4">
-                                                    <button
-                                                        onClick={() => toggleFavorite({
-                                                            type: 'subscription',
-                                                            name: sub.name,
-                                                            path: `/tenants/${tenant}/namespaces/${namespace}/topics/${topic}/subscription/${sub.name}`,
-                                                            tenant: tenant,
-                                                            namespace: namespace,
-                                                            topic: topic,
-                                                        })}
-                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
-                                                        title={isFavorite('subscription', sub.name, tenant, namespace, topic) ? "Remove from favorites" : "Add to favorites"}
-                                                    >
-                                                        <Star
-                                                            size={16}
-                                                            className={isFavorite('subscription', sub.name, tenant, namespace, topic) ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
-                                                            fill={isFavorite('subscription', sub.name, tenant, namespace, topic) ? "currentColor" : "none"}
-                                                        />
-                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        {sub.is_blocked && (
+                                                            <span title="Blocked on unacked messages">
+                                                                <AlertTriangle size={14} className="text-red-400" />
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => toggleFavorite({
+                                                                type: 'subscription',
+                                                                name: sub.name,
+                                                                path: `/tenants/${tenant}/namespaces/${namespace}/topics/${topic}/subscription/${sub.name}`,
+                                                                tenant: tenant,
+                                                                namespace: namespace,
+                                                                topic: topic,
+                                                            })}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+                                                            title={isFavorite('subscription', sub.name, tenant, namespace, topic) ? "Remove from favorites" : "Add to favorites"}
+                                                        >
+                                                            <Star
+                                                                size={16}
+                                                                className={isFavorite('subscription', sub.name, tenant, namespace, topic) ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}
+                                                                fill={isFavorite('subscription', sub.name, tenant, namespace, topic) ? "currentColor" : "none"}
+                                                            />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                                 <td className="p-4 font-medium">
                                                     <Link
@@ -786,7 +895,19 @@ export default function TopicDetailPage() {
                                                         {sub.msg_backlog.toLocaleString()}
                                                     </span>
                                                 </td>
+                                                <td className="p-4 text-right text-muted-foreground">{formatBytes(sub.backlog_size)}</td>
+                                                <td className="p-4 text-right">
+                                                    <span className={sub.unacked_messages > 0 ? 'text-orange-400' : ''}>
+                                                        {sub.unacked_messages.toLocaleString()}
+                                                    </span>
+                                                </td>
                                                 <td className="p-4 text-right">{formatRate(sub.msg_rate_out)}</td>
+                                                <td className="p-4 text-right text-muted-foreground">{formatBytes(sub.msg_throughput_out)}/s</td>
+                                                <td className="p-4 text-right">
+                                                    <span className={sub.msg_rate_redeliver > 0 ? 'text-red-400' : 'text-muted-foreground'}>
+                                                        {formatRate(sub.msg_rate_redeliver)}
+                                                    </span>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

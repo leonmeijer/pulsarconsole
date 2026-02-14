@@ -93,18 +93,23 @@ class SubscriptionService:
                     "unacked_messages": consumer.get("unackedMessages", 0),
                 })
 
+            unacked = sum(c.get("unackedMessages", 0) for c in sub_stats.get("consumers", []))
+
             subscription_data = {
                 "name": sub_name,
                 "topic": full_topic,
                 "type": sub_stats.get("type", "Exclusive"),
                 "msg_backlog": sub_stats.get("msgBacklog", 0),
+                "backlog_size": sub_stats.get("backlogSize", 0),
                 "msg_rate_out": sub_stats.get("msgRateOut", 0),
                 "msg_throughput_out": sub_stats.get("msgThroughputOut", 0),
                 "msg_rate_expired": sub_stats.get("msgRateExpired", 0),
-                "unacked_messages": sub_stats.get("unackedMessages", 0),
+                "msg_rate_redeliver": sub_stats.get("msgRateRedeliver", 0),
+                "unacked_messages": unacked,
                 "consumer_count": len(consumers),
                 "consumers": consumers,
                 "is_durable": sub_stats.get("isDurable", True),
+                "is_blocked": sub_stats.get("blockedSubscriptionOnUnackedMsgs", False),
                 "replicated": sub_stats.get("isReplicated", False),
             }
 
