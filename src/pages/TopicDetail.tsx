@@ -35,7 +35,7 @@ import { useAutoRefresh, formatLastRefresh } from "@/hooks/useAutoRefresh";
 import type { Message, MessagePayload } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format";
-import { TopicPartitionEditor, ConfirmDialog } from "@/components/shared";
+import { TopicPartitionEditor, ConfirmDialog, JsonTreeViewer } from "@/components/shared";
 import { useFavorites } from "@/context/FavoritesContext";
 import { PermissionGate } from "@/components/auth";
 
@@ -56,18 +56,40 @@ function formatTimestamp(timestamp: string): string {
     return new Date(timestamp).toLocaleString();
 }
 
+function tryExtractJson(text: string): { prefix?: string; json: unknown } | null {
+    try {
+        return { json: JSON.parse(text) };
+    } catch {
+        const jsonStart = text.search(/[{[]/);
+        if (jsonStart > 0) {
+            try {
+                return { prefix: text.slice(0, jsonStart).trim(), json: JSON.parse(text.slice(jsonStart)) };
+            } catch {
+                // not valid JSON
+            }
+        }
+    }
+    return null;
+}
+
 function PayloadViewer({ payload }: { payload: MessagePayload }) {
     const [expanded, setExpanded] = useState(false);
+
+    const textContent = payload.type === "text" ? String(payload.content) : null;
+    const extractedJson = textContent ? tryExtractJson(textContent) : null;
+
+    const label = payload.type === "json"
+        ? "JSON"
+        : payload.type === "binary"
+            ? "BINARY"
+            : extractedJson
+                ? "TEXT \u2014 JSON payload extracted"
+                : "TEXT";
 
     const renderContent = () => {
         if (payload.type === "json") {
             try {
-                const formatted = JSON.stringify(payload.content, null, 2);
-                return (
-                    <pre className="text-sm font-mono overflow-x-auto whitespace-pre-wrap break-words">
-                        {formatted}
-                    </pre>
-                );
+                return <JsonTreeViewer data={payload.content} defaultExpandDepth={2} />;
             } catch {
                 return <span className="text-muted-foreground">Invalid JSON</span>;
             }
@@ -86,7 +108,18 @@ function PayloadViewer({ payload }: { payload: MessagePayload }) {
                 </div>
             );
         }
-        return <pre className="text-sm font-mono whitespace-pre-wrap">{String(payload.content)}</pre>;
+        // Text payload with embedded JSON
+        if (extractedJson) {
+            return (
+                <div>
+                    {extractedJson.prefix && (
+                        <pre className="text-sm font-mono whitespace-pre-wrap text-muted-foreground mb-2">{extractedJson.prefix}</pre>
+                    )}
+                    <JsonTreeViewer data={extractedJson.json} defaultExpandDepth={2} />
+                </div>
+            );
+        }
+        return <pre className="text-sm font-mono whitespace-pre-wrap">{textContent}</pre>;
     };
 
     return (
@@ -97,7 +130,7 @@ function PayloadViewer({ payload }: { payload: MessagePayload }) {
             >
                 {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 <span className="text-xs text-muted-foreground uppercase">
-                    {payload.type}
+                    {label}
                 </span>
                 {payload.size && (
                     <span className="text-xs text-muted-foreground">
@@ -436,6 +469,7 @@ export default function TopicDetailPage() {
     const [showPartitionEditor, setShowPartitionEditor] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showTruncateConfirm, setShowTruncateConfirm] = useState(false);
+    const [showProducers, setShowProducers] = useState(false);
     const { isFavorite, toggleFavorite } = useFavorites();
 
     const isLoading = topicLoading || subsLoading;
@@ -771,34 +805,42 @@ export default function TopicDetailPage() {
 
                     {/* Producers */}
                     <div>
-                        <h2 className="text-xl font-semibold mb-4">Producers ({topicData.producer_count})</h2>
-                        {topicData.producers.length === 0 ? (
-                            <div className="glass p-6 rounded-xl text-muted-foreground text-center">
-                                No active producers
-                            </div>
-                        ) : (
-                            <div className="glass rounded-xl overflow-hidden">
-                                <table className="w-full">
-                                    <thead className="bg-white/5">
-                                        <tr>
-                                            <th className="text-left p-4 text-sm font-semibold">Name</th>
-                                            <th className="text-left p-4 text-sm font-semibold">Address</th>
-                                            <th className="text-right p-4 text-sm font-semibold">Msg Rate</th>
-                                            <th className="text-right p-4 text-sm font-semibold">Throughput</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {topicData.producers.map((producer, i) => (
-                                            <tr key={i} className="border-t border-white/5 hover:bg-white/5">
-                                                <td className="p-4">{producer.producer_name || 'Unknown'}</td>
-                                                <td className="p-4 text-muted-foreground">{producer.address || '-'}</td>
-                                                <td className="p-4 text-right">{formatRate(producer.msg_rate_in)}</td>
-                                                <td className="p-4 text-right">{formatBytes(producer.msg_throughput_in)}/s</td>
+                        <h2
+                            className="text-xl font-semibold mb-4 flex items-center gap-2 cursor-pointer select-none"
+                            onClick={() => setShowProducers(!showProducers)}
+                        >
+                            {showProducers ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                            Producers ({topicData.producer_count})
+                        </h2>
+                        {showProducers && (
+                            topicData.producers.length === 0 ? (
+                                <div className="glass p-6 rounded-xl text-muted-foreground text-center">
+                                    No active producers
+                                </div>
+                            ) : (
+                                <div className="glass rounded-xl overflow-hidden">
+                                    <table className="w-full">
+                                        <thead className="bg-white/5">
+                                            <tr>
+                                                <th className="text-left p-4 text-sm font-semibold">Name</th>
+                                                <th className="text-left p-4 text-sm font-semibold">Address</th>
+                                                <th className="text-right p-4 text-sm font-semibold">Msg Rate</th>
+                                                <th className="text-right p-4 text-sm font-semibold">Throughput</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {topicData.producers.map((producer, i) => (
+                                                <tr key={i} className="border-t border-white/5 hover:bg-white/5">
+                                                    <td className="p-4">{producer.producer_name || 'Unknown'}</td>
+                                                    <td className="p-4 text-muted-foreground">{producer.address || '-'}</td>
+                                                    <td className="p-4 text-right">{formatRate(producer.msg_rate_in)}</td>
+                                                    <td className="p-4 text-right">{formatBytes(producer.msg_throughput_in)}/s</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )
                         )}
                     </div>
 
