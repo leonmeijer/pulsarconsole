@@ -1,39 +1,52 @@
 ---
-description: Release a new version with Docker image builds
+description: Release management via release-please (automated)
 ---
 
 # Release Procedure
 
-## Steps
+Releases are **fully automated** via [release-please](https://github.com/googleapis/release-please).
 
-1. **Check latest release version**
-   ```bash
-   gh release list --repo pezzking/pulsarconsole --limit 5
-   ```
+## How It Works
 
-2. **Determine next version** (semver)
-   - `feat:` commits → bump minor (e.g., 1.1.0 → 1.2.0)
-   - `fix:` commits only → bump patch (e.g., 1.1.0 → 1.1.1)
-   - Breaking changes → bump major
+1. Push commits to `main` using **conventional commits** (`feat:`, `fix:`, `chore:`, etc.)
+2. release-please automatically creates/updates a **Release PR** with:
+   - Computed next version (based on commit types)
+   - Updated `CHANGELOG.md`
+   - Updated `.release-please-manifest.json`
+3. **Merge the Release PR** → release-please creates a GitHub Release + tag
+4. The tag automatically triggers Docker image builds via `build-and-publish.yml`
 
-3. **Commit and push changes**
-   ```bash
-   git push origin main
-   ```
+## Version Bumps
 
-4. **Create GitHub release** (this creates the tag, which triggers the Docker build)
-   ```bash
-   gh api repos/pezzking/pulsarconsole/releases -f tag_name=vX.Y.Z -f name="vX.Y.Z" -F generate_release_notes=true
-   ```
+- `feat:` commits → bump **minor** (e.g., 1.1.0 → 1.2.0)
+- `fix:` commits → bump **patch** (e.g., 1.1.0 → 1.1.1)
+- `feat!:` or `BREAKING CHANGE:` → bump **major** (e.g., 1.1.0 → 2.0.0)
+- `chore:`, `docs:`, `ci:` → no release (bundled into the next one)
 
-5. **Verify build completion**
-   ```bash
-   gh run list --repo pezzking/pulsarconsole --limit 3
-   ```
+## Check Status
+
+```bash
+# Check for open Release PR
+gh pr list --repo pezzking/pulsarconsole --label "autorelease: pending"
+
+# Check recent releases
+gh release list --repo pezzking/pulsarconsole --limit 5
+
+# Check build status
+gh run list --repo pezzking/pulsarconsole --limit 3
+```
+
+## Manual Release (fallback)
+
+If you need to create a release manually (e.g., hotfix):
+
+```bash
+gh workflow run release.yml --repo pezzking/pulsarconsole -f version=X.Y.Z
+```
 
 ## Image Names
 
-Docker images are built and pushed to GHCR **only on tag pushes** (not on every push to main):
+Docker images are pushed to GHCR on each release:
 - `ghcr.io/pezzking/pulsar-console-api`
 - `ghcr.io/pezzking/pulsar-console-ui`
 
@@ -42,3 +55,4 @@ Each release produces tags: `latest`, `vX.Y.Z`, `vX.Y`, and the git short SHA.
 ## Notes
 
 - Do NOT modify anything in `k8s/` directory - leave versions on `latest`
+- Use conventional commit messages so release-please can compute versions correctly
