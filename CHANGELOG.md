@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/pezzking/pulsarconsole/compare/v1.2.0...v1.2.1) (2026-02-14)
+
+
+### Bug Fixes
+
+* tag Docker images with version from release-please ([837197a](https://github.com/pezzking/pulsarconsole/commit/837197a465fc78065f1dc0a5224ccfa6d54fb7e5))
+
 ## [1.2.0](https://github.com/pezzking/pulsarconsole/compare/v1.1.2...v1.2.0) (2026-02-14)
 
 
