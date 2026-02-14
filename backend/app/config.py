@@ -124,6 +124,11 @@ class Settings(BaseSettings):
     oidc_admin_groups: str | None = Field(default=None)
     # Whether to sync roles from OIDC groups on every login (removes roles not in groups)
     oidc_sync_roles_on_login: bool = Field(default=True)
+    # JSON mapping of OIDC group names to role names (applied to all environments)
+    # e.g., '{"developers":"operator","viewers":"viewer","admins":"superuser"}'
+    oidc_group_role_mappings: str | None = Field(default=None)
+    # Default role to assign to any authenticated OIDC user (e.g., "viewer")
+    oidc_default_role: str | None = Field(default=None)
 
     # -------------------------------------------------------------------------
     # Session Settings
@@ -195,6 +200,20 @@ class Settings(BaseSettings):
         if not self.oidc_admin_groups:
             return []
         return [g.strip() for g in self.oidc_admin_groups.split(",") if g.strip()]
+
+    @computed_field
+    @property
+    def oidc_group_role_mappings_dict(self) -> dict[str, str]:
+        """Parse OIDC group-role mappings from JSON string."""
+        if not self.oidc_group_role_mappings:
+            return {}
+        try:
+            result = json.loads(self.oidc_group_role_mappings)
+            if isinstance(result, dict):
+                return {str(k): str(v) for k, v in result.items()}
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return {}
 
     @model_validator(mode="after")
     def resolve_bws_secrets(self) -> "Settings":

@@ -365,7 +365,11 @@ class AuthService:
                     )
 
             # Apply group-to-role mappings
-            await self._apply_group_role_mappings(user, groups, provider)
+            if provider:
+                await self._apply_group_role_mappings(user, groups, provider)
+            else:
+                # Global OIDC config — use env var mappings across all environments
+                await self._apply_global_group_role_mappings(user, groups)
 
         # Create session
         token_pair, session = await self.create_session(
@@ -425,42 +429,23 @@ class AuthService:
         # Fall back to global setting
         return settings.oidc_sync_roles_on_login
 
-    async def _apply_group_role_mappings(
+    async def _sync_user_roles_for_environment(
         self,
         user: User,
-        groups: list[str],
-        provider: OIDCProvider | None,
+        target_role_names: set[str],
+        environment_id: UUID,
+        sync_enabled: bool,
     ) -> None:
-        """Apply group-to-role mappings for the user."""
-        if not provider or not provider.group_role_mappings:
-            return
+        """Sync user roles for a single environment based on target role names.
 
-        from sqlalchemy import select, delete
+        Adds missing roles and optionally removes roles not in target set.
+        """
+        from sqlalchemy import select
         from app.models.role import Role
         from app.models.user_role import UserRole
 
-        # Get the environment ID from the provider
-        environment_id = provider.environment_id
-
-        # Find roles that match the user's groups
-        target_role_names: set[str] = set()
-        for group in groups:
-            if group in provider.group_role_mappings:
-                role_name = provider.group_role_mappings[group]
-                target_role_names.add(role_name)
-                logger.debug(
-                    "Group mapped to role",
-                    group=group,
-                    role_name=role_name,
-                )
-
-        # Also add default role if configured
-        if provider.default_role_name:
-            target_role_names.add(provider.default_role_name)
-
         if not target_role_names:
-            # If sync is enabled and no roles matched, remove all roles for this environment
-            if provider.sync_roles_on_login:
+            if sync_enabled:
                 await self._remove_user_roles_for_environment(user.id, environment_id)
             return
 
@@ -500,7 +485,7 @@ class AuthService:
                 )
 
         # Remove roles not in target set (if sync is enabled)
-        if provider.sync_roles_on_login:
+        if sync_enabled:
             target_role_ids = {role.id for role in target_roles.values()}
             for user_role in current_user_roles:
                 if user_role.role_id not in target_role_ids:
@@ -513,6 +498,82 @@ class AuthService:
                     )
 
         await self.db.flush()
+
+    async def _apply_group_role_mappings(
+        self,
+        user: User,
+        groups: list[str],
+        provider: OIDCProvider | None,
+    ) -> None:
+        """Apply group-to-role mappings for the user (per-environment provider)."""
+        if not provider or not provider.group_role_mappings:
+            return
+
+        # Find roles that match the user's groups
+        target_role_names: set[str] = set()
+        for group in groups:
+            if group in provider.group_role_mappings:
+                role_name = provider.group_role_mappings[group]
+                target_role_names.add(role_name)
+                logger.debug(
+                    "Group mapped to role",
+                    group=group,
+                    role_name=role_name,
+                )
+
+        # Also add default role if configured
+        if provider.default_role_name:
+            target_role_names.add(provider.default_role_name)
+
+        await self._sync_user_roles_for_environment(
+            user=user,
+            target_role_names=target_role_names,
+            environment_id=provider.environment_id,
+            sync_enabled=provider.sync_roles_on_login,
+        )
+
+    async def _apply_global_group_role_mappings(
+        self,
+        user: User,
+        groups: list[str],
+    ) -> None:
+        """Apply group-to-role mappings from global env vars across all environments."""
+        from sqlalchemy import select
+        from app.models.environment import Environment
+
+        group_mappings = settings.oidc_group_role_mappings_dict
+        default_role = settings.oidc_default_role
+        sync_enabled = settings.oidc_sync_roles_on_login
+
+        if not group_mappings and not default_role:
+            return
+
+        # Build target role names from user's groups
+        target_role_names: set[str] = set()
+        for group in groups:
+            if group in group_mappings:
+                role_name = group_mappings[group]
+                target_role_names.add(role_name)
+                logger.debug(
+                    "Global group mapped to role",
+                    group=group,
+                    role_name=role_name,
+                )
+
+        if default_role:
+            target_role_names.add(default_role)
+
+        # Apply to all environments
+        result = await self.db.execute(select(Environment.id))
+        environment_ids = result.scalars().all()
+
+        for env_id in environment_ids:
+            await self._sync_user_roles_for_environment(
+                user=user,
+                target_role_names=target_role_names,
+                environment_id=env_id,
+                sync_enabled=sync_enabled,
+            )
 
     async def _remove_user_roles_for_environment(
         self, user_id: UUID, environment_id: UUID
