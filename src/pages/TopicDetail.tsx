@@ -450,7 +450,6 @@ export default function TopicDetailPage() {
         toggleAutoRefresh,
         refresh,
         lastRefresh,
-        secondsUntilRefresh,
     } = useAutoRefresh({
         enabled: true,
         interval: 10000, // 10 seconds
@@ -522,9 +521,6 @@ export default function TopicDetailPage() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock size={14} />
                         <span>Updated {formatLastRefresh(lastRefresh)}</span>
-                        {isAutoRefreshEnabled && (
-                            <span className="text-xs">({secondsUntilRefresh}s)</span>
-                        )}
                     </div>
                     <button
                         onClick={toggleAutoRefresh}

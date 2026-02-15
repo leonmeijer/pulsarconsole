@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 
 from app.config import settings
 from app.core.database import worker_session_factory
-from app.core.logging import get_logger
 from app.core.events import event_bus
+from app.core.logging import get_logger
+from app.core.redis import close_redis
 from app.models.stats import BrokerStats, SubscriptionStats, TopicStats
 from app.repositories.environment import EnvironmentRepository
 from app.services.pulsar_admin import PulsarAdminService
@@ -22,6 +23,7 @@ def run_async(coro):
     try:
         return loop.run_until_complete(coro)
     finally:
+        loop.run_until_complete(close_redis())
         loop.close()
 
 

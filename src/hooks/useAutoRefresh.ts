@@ -20,15 +20,19 @@ export function useAutoRefresh({
     const queryClient = useQueryClient();
     const intervalRef = useRef<number | null>(null);
     const countdownRef = useRef<number | null>(null);
+    const queryKeysRef = useRef(queryKeys);
+    useEffect(() => {
+        queryKeysRef.current = queryKeys;
+    }, [queryKeys]);
 
     const refresh = useCallback(() => {
-        queryKeys.forEach((key) => {
+        queryKeysRef.current.forEach((key) => {
             queryClient.invalidateQueries({ queryKey: key });
         });
         setLastRefresh(new Date());
         setSecondsUntilRefresh(interval / 1000);
         onRefresh?.();
-    }, [queryClient, queryKeys, interval, onRefresh]);
+    }, [queryClient, interval, onRefresh]);
 
     const toggleAutoRefresh = useCallback(() => {
         setIsAutoRefreshEnabled((prev) => !prev);
@@ -72,7 +76,7 @@ export function formatLastRefresh(date: Date): string {
     const diffMs = now.getTime() - date.getTime();
     const diffSecs = Math.floor(diffMs / 1000);
 
-    if (diffSecs < 5) return "Just now";
+    if (diffSecs < 2) return "Just now";
     if (diffSecs < 60) return `${diffSecs}s ago`;
     if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
     return date.toLocaleTimeString();

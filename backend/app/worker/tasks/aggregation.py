@@ -7,7 +7,9 @@ from sqlalchemy import and_, func, select
 
 from app.core.database import worker_session_factory
 from app.core.logging import get_logger
+from app.core.redis import close_redis
 from app.models.stats import Aggregation, SubscriptionStats, TopicStats
+from app.repositories.environment import EnvironmentRepository
 from app.worker.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -20,12 +22,21 @@ def run_async(coro):
     try:
         return loop.run_until_complete(coro)
     finally:
+        loop.run_until_complete(close_redis())
         loop.close()
 
 
 async def _compute_aggregations_async():
     """Compute aggregations from latest topic and subscription stats."""
     async with worker_session_factory() as session:
+        # Get environment ID
+        env_repo = EnvironmentRepository(session)
+        envs = await env_repo.get_all(limit=1)
+        if not envs:
+            logger.warning("No environment configured, skipping aggregation computation")
+            return 0
+        env_id = envs[0].id
+
         # Get latest stats per topic using a subquery
         subq = (
             select(
@@ -113,7 +124,7 @@ async def _compute_aggregations_async():
 
         # Aggregate by tenant
         tenant_aggs = {}
-        for (tenant, namespace), ns_agg in namespace_aggs.items():
+        for (tenant, _namespace), ns_agg in namespace_aggs.items():
             if tenant not in tenant_aggs:
                 tenant_aggs[tenant] = {
                     "topic_count": 0,
@@ -135,11 +146,12 @@ async def _compute_aggregations_async():
 
         # Namespace aggregations
         for (tenant, namespace), agg_data in namespace_aggs.items():
-            # Check if exists
+            agg_key = f"{tenant}/{namespace}"
             result = await session.execute(
                 select(Aggregation).where(
-                    Aggregation.tenant == tenant,
-                    Aggregation.namespace == namespace,
+                    Aggregation.environment_id == env_id,
+                    Aggregation.aggregation_type == "namespace",
+                    Aggregation.aggregation_key == agg_key,
                 )
             )
             existing = result.scalar_one_or_none()
@@ -153,8 +165,9 @@ async def _compute_aggregations_async():
                 existing.computed_at = now
             else:
                 agg = Aggregation(
-                    tenant=tenant,
-                    namespace=namespace,
+                    environment_id=env_id,
+                    aggregation_type="namespace",
+                    aggregation_key=agg_key,
                     topic_count=agg_data["topic_count"],
                     total_msg_rate_in=agg_data["total_msg_rate_in"],
                     total_msg_rate_out=agg_data["total_msg_rate_out"],
@@ -165,12 +178,13 @@ async def _compute_aggregations_async():
                 session.add(agg)
             count += 1
 
-        # Tenant aggregations (namespace=None)
+        # Tenant aggregations
         for tenant, agg_data in tenant_aggs.items():
             result = await session.execute(
                 select(Aggregation).where(
-                    Aggregation.tenant == tenant,
-                    Aggregation.namespace.is_(None),
+                    Aggregation.environment_id == env_id,
+                    Aggregation.aggregation_type == "tenant",
+                    Aggregation.aggregation_key == tenant,
                 )
             )
             existing = result.scalar_one_or_none()
@@ -184,8 +198,9 @@ async def _compute_aggregations_async():
                 existing.computed_at = now
             else:
                 agg = Aggregation(
-                    tenant=tenant,
-                    namespace=None,
+                    environment_id=env_id,
+                    aggregation_type="tenant",
+                    aggregation_key=tenant,
                     topic_count=agg_data["topic_count"],
                     total_msg_rate_in=agg_data["total_msg_rate_in"],
                     total_msg_rate_out=agg_data["total_msg_rate_out"],
