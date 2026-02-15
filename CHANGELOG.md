@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/leonmeijer/pulsarconsole/compare/v1.3.0...v1.4.0) (2026-02-15)
+
+
+### Features
+
+* aggregation model improvements, auto-refresh stability, and Redis cleanup ([#16](https://github.com/leonmeijer/pulsarconsole/issues/16)) ([efa9e21](https://github.com/leonmeijer/pulsarconsole/commit/efa9e21f2dd51f0b31287a1cc2900fa957226dd7))
+
 ## [1.3.0](https://github.com/pezzking/pulsarconsole/compare/v1.2.1...v1.3.0) (2026-02-15)
 
 
