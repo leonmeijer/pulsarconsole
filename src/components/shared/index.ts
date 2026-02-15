@@ -12,3 +12,4 @@ export { default as Header } from "./Header";
 export { default as Sidebar } from "./Sidebar";
 export { default as ThemeSwitch } from "./ThemeSwitch";
 export { default as ThemeSync } from "./ThemeSync";
+export { default as JsonTreeViewer } from "./JsonTreeViewer";
