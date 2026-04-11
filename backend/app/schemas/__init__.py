@@ -73,6 +73,7 @@ from app.schemas.tenant import (
 )
 from app.schemas.topic import (
     TopicCreate,
+    TopicDescriptionUpdate,
     TopicDetailResponse,
     TopicListResponse,
     TopicPartitionUpdate,
@@ -139,6 +140,7 @@ __all__ = [
     "TopicDetailResponse",
     "TopicListResponse",
     "TopicPartitionUpdate",
+    "TopicDescriptionUpdate",
     "TopicResponse",
     # Subscription
     "ConsumerInfo",

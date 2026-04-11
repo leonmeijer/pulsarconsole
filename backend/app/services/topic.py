@@ -73,19 +73,38 @@ class TopicService:
             }
         return {"name": full_name, "persistent": True}
 
+    async def _safe_internal_stats(self, full_name: str) -> dict[str, Any]:
+        """Fetch internal stats with error handling."""
+        try:
+            return await self.pulsar.get_topic_internal_stats(full_name)
+        except Exception:
+            return {}
+
+    async def _fetch_topic_description(self, full_name: str) -> str:
+        """Fetch the description property for a topic. Returns empty string on failure."""
+        try:
+            props = await self.pulsar.get_topic_properties(full_name)
+            return props.get("description", "") if isinstance(props, dict) else ""
+        except Exception:
+            return ""
+
     async def _fetch_topic_stats(self, full_name: str) -> dict[str, Any]:
         """Fetch stats for a single topic with error handling.
 
         Returns a dict with full_name and stats, or empty stats on failure.
         """
         try:
-            live_stats = await self.pulsar.get_topic_stats(full_name)
+            live_stats, description = await asyncio.gather(
+                self.pulsar.get_topic_stats(full_name),
+                self._fetch_topic_description(full_name),
+            )
             subscriptions = live_stats.get("subscriptions", {})
             msg_backlog = sum(
                 sub.get("msgBacklog", 0) for sub in subscriptions.values()
             )
             return {
                 "full_name": full_name,
+                "description": description,
                 "producer_count": len(live_stats.get("publishers", [])),
                 "subscription_count": len(subscriptions),
                 "msg_in_counter": live_stats.get("msgInCounter", 0),
@@ -100,6 +119,7 @@ class TopicService:
             )
             return {
                 "full_name": full_name,
+                "description": "",
                 "producer_count": 0,
                 "subscription_count": 0,
                 "msg_in_counter": 0,
@@ -199,6 +219,7 @@ class TopicService:
                 "msg_backlog": live_stats.get("msg_backlog", 0),
             }
 
+            topic_data["description"] = live_stats.get("description", "")
             topics.append(topic_data)
 
         # Cache result
@@ -217,17 +238,17 @@ class TopicService:
         persistence = "persistent" if persistent else "non-persistent"
         full_name = f"{persistence}://{tenant}/{namespace}/{topic}"
 
-        # Get stats from Pulsar
+        # Get stats, internal stats, and description from Pulsar in parallel
         try:
             stats = await self.pulsar.get_topic_stats(full_name)
         except NotFoundError:
             raise NotFoundError("topic", full_name)
 
-        # Get internal stats
-        try:
-            internal_stats = await self.pulsar.get_topic_internal_stats(full_name)
-        except Exception:
-            internal_stats = {}
+        internal_stats_result, description = await asyncio.gather(
+            self._safe_internal_stats(full_name),
+            self._fetch_topic_description(full_name),
+        )
+        internal_stats = internal_stats_result
 
         # Get subscriptions
         subscriptions = []
@@ -264,6 +285,7 @@ class TopicService:
             "name": topic,
             "full_name": full_name,
             "persistent": persistent,
+            "description": description,
             "stats": {
                 "msg_rate_in": stats.get("msgRateIn", 0),
                 "msg_rate_out": stats.get("msgRateOut", 0),
@@ -510,6 +532,31 @@ class TopicService:
         await self.pulsar.truncate_topic(tenant, namespace, topic, persistent)
         logger.info(
             "Topic truncated",
+            tenant=tenant,
+            namespace=namespace,
+            topic=topic,
+        )
+
+    async def update_description(
+        self,
+        tenant: str,
+        namespace: str,
+        topic: str,
+        description: str,
+        persistent: bool = True,
+    ) -> None:
+        """Update the description property for a topic."""
+        persistence = "persistent" if persistent else "non-persistent"
+        full_name = f"{persistence}://{tenant}/{namespace}/{topic}"
+        await self.pulsar.set_topic_properties(full_name, {"description": description})
+
+        # Invalidate cache so next fetch picks up the new description
+        env_id = self.pulsar.environment_id or "default"
+        await self.cache.invalidate_topic(env_id, full_name)
+        await self.cache.invalidate_topics(env_id, tenant, namespace)
+
+        logger.info(
+            "Topic description updated",
             tenant=tenant,
             namespace=namespace,
             topic=topic,

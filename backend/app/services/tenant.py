@@ -61,75 +61,37 @@ class TenantService:
             if cached:
                 return cached
 
-        # Fetch from Pulsar
+        # Fetch tenant names and config from Pulsar
         tenant_names = await self.pulsar.get_tenants()
+
+        # Load all tenant aggregations in one DB query (same source as namespace list)
+        all_aggs = await self.aggregation_repo.get_all_tenants()
+        agg_map = {a.aggregation_key: a for a in all_aggs}
 
         tenants = []
         for name in tenant_names:
             tenant_info = await self.pulsar.get_tenant(name)
+            agg = agg_map.get(name)
 
-            tenant_data = {
+            # Namespace count still requires a cheap Admin API call (no agg field for it)
+            try:
+                namespaces = await self.pulsar.get_namespaces(name)
+                namespace_count = len(namespaces)
+            except Exception:
+                namespace_count = 0
+
+            tenants.append({
                 "name": name,
                 "admin_roles": tenant_info.get("adminRoles", []),
                 "allowed_clusters": tenant_info.get("allowedClusters", []),
-                "namespace_count": 0,
-                "topic_count": 0,
-                "total_backlog": 0,
-                "msg_rate_in": 0.0,
-                "msg_rate_out": 0.0,
+                "namespace_count": namespace_count,
+                "topic_count": agg.topic_count if agg else 0,
+                "total_backlog": agg.total_backlog if agg else 0,
+                "msg_rate_in": agg.total_msg_rate_in if agg else 0.0,
+                "msg_rate_out": agg.total_msg_rate_out if agg else 0.0,
                 "msg_throughput_in": 0.0,
                 "msg_throughput_out": 0.0,
-            }
-
-            # Get namespaces and aggregate stats
-            try:
-                namespaces = await self.pulsar.get_namespaces(name)
-                tenant_data["namespace_count"] = len(namespaces)
-
-                # Aggregate stats from all namespaces
-                total_topics = 0
-                total_backlog = 0
-                total_rate_in = 0.0
-                total_rate_out = 0.0
-                total_throughput_in = 0.0
-                total_throughput_out = 0.0
-
-                for ns in namespaces:
-                    ns_name = ns.split("/")[-1] if "/" in ns else ns
-                    try:
-                        # Get topics in namespace
-                        topics = await self.pulsar.get_topics(name, ns_name)
-                        total_topics += len(topics)
-
-                        # Get stats for each topic
-                        for topic in topics:
-                            try:
-                                stats = await self.pulsar.get_topic_stats(topic)
-                                # Sum msgBacklog from all subscriptions (message count)
-                                # instead of backlogSize (which is in bytes)
-                                subscriptions = stats.get("subscriptions", {})
-                                for sub_stats in subscriptions.values():
-                                    total_backlog += sub_stats.get("msgBacklog", 0)
-                                total_rate_in += stats.get("msgRateIn", 0)
-                                total_rate_out += stats.get("msgRateOut", 0)
-                                total_throughput_in += stats.get("msgThroughputIn", 0)
-                                total_throughput_out += stats.get("msgThroughputOut", 0)
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-
-                tenant_data["topic_count"] = total_topics
-                tenant_data["total_backlog"] = total_backlog
-                tenant_data["msg_rate_in"] = total_rate_in
-                tenant_data["msg_rate_out"] = total_rate_out
-                tenant_data["msg_throughput_in"] = total_throughput_in
-                tenant_data["msg_throughput_out"] = total_throughput_out
-
-            except Exception:
-                pass
-
-            tenants.append(tenant_data)
+            })
 
         # Cache result
         await self.cache.set_tenants(env_id, tenants)

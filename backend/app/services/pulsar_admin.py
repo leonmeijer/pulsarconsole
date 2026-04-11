@@ -463,6 +463,33 @@ class PulsarAdminService:
         )
         return self._handle_response(response, "topic")
 
+    async def get_topic_properties(self, topic: str) -> dict[str, str]:
+        """Get custom properties for a topic."""
+        parts = topic.replace("://", "/").split("/")
+        if len(parts) != 4:
+            raise ValidationError(f"Invalid topic name: {topic}")
+
+        topic_type, tenant, namespace, topic_name = parts
+        response = await self._request(
+            "GET",
+            f"/admin/v2/{topic_type}/{tenant}/{namespace}/{topic_name}/properties",
+        )
+        return self._handle_response(response, "topic")
+
+    async def set_topic_properties(self, topic: str, properties: dict[str, str]) -> None:
+        """Set custom properties for a topic (POST merges with existing properties)."""
+        parts = topic.replace("://", "/").split("/")
+        if len(parts) != 4:
+            raise ValidationError(f"Invalid topic name: {topic}")
+
+        topic_type, tenant, namespace, topic_name = parts
+        response = await self._request(
+            "POST",
+            f"/admin/v2/{topic_type}/{tenant}/{namespace}/{topic_name}/properties",
+            json=properties,
+        )
+        self._handle_response(response, "topic")
+
     async def create_topic(
         self,
         tenant: str,
