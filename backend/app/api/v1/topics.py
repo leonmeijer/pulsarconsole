@@ -7,6 +7,7 @@ from app.models.audit import ResourceType
 from app.schemas import (
     SuccessResponse,
     TopicCreate,
+    TopicDescriptionUpdate,
     TopicDetailResponse,
     TopicListResponse,
     TopicPartitionUpdate,
@@ -158,6 +159,35 @@ async def update_topic_partitions(
     )
 
     return TopicResponse(**result)
+
+
+@router.patch("/{topic}/description", response_model=SuccessResponse)
+async def update_topic_description(
+    tenant: str,
+    namespace: str,
+    topic: str,
+    data: TopicDescriptionUpdate,
+    _user: CurrentApprovedUser,
+    service: TopicSvc,
+    audit: AuditSvc,
+    request_info: RequestInfo,
+    persistent: bool = Query(default=True, description="Persistent topic"),
+) -> SuccessResponse:
+    """Update the description for a topic."""
+    await service.update_description(
+        tenant, namespace, topic, data.description, persistent=persistent
+    )
+
+    # Log audit event
+    persistence = "persistent" if persistent else "non-persistent"
+    await audit.log_update(
+        resource_type=ResourceType.TOPIC,
+        resource_id=f"{persistence}://{tenant}/{namespace}/{topic}",
+        details={"description": data.description},
+        **request_info,
+    )
+
+    return SuccessResponse(message=f"Topic description updated")
 
 
 @router.post("/{topic}/unload", response_model=SuccessResponse)
