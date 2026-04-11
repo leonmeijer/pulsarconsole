@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/leonmeijer/pulsarconsole/compare/v1.4.0...v1.5.0) (2026-04-11)
+
+
+### Features
+
+* topic descriptions and faster tenant list ([c1c2b2e](https://github.com/leonmeijer/pulsarconsole/commit/c1c2b2e98c52906a10220bea8e9bcdb4f9623210))
+
+
+### Bug Fixes
+
+* **k8s:** rename frontend image to pulsar-console-ui in overlays ([d959f8a](https://github.com/leonmeijer/pulsarconsole/commit/d959f8a61e7e56579f8a3b7b9c1c9b5ac4a736f2))
+
 ## [1.4.0](https://github.com/leonmeijer/pulsarconsole/compare/v1.3.0...v1.4.0) (2026-02-15)
 
 
