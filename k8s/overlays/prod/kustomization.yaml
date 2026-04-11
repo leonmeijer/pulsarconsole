@@ -70,4 +70,5 @@ images:
   - name: ghcr.io/leonmeijer/pulsar-console-api
     newTag: latest
   - name: ghcr.io/leonmeijer/pulsar-console-frontend
+    newName: ghcr.io/leonmeijer/pulsar-console-ui
     newTag: latest
