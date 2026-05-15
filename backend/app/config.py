@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # Stats collection intervals (seconds)
     stats_collection_interval: int = Field(default=30)
     broker_stats_interval: int = Field(default=60)
-    aggregation_interval: int = Field(default=60)
+    aggregation_interval: int = Field(default=30)
     cleanup_interval: int = Field(default=86400)
 
     # -------------------------------------------------------------------------

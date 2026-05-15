@@ -75,6 +75,7 @@ class TopicResponse(TopicBase, StatsBase):
     namespace: str
     full_name: str
     persistent: bool = True
+    description: str = ""
     producer_count: int = 0
     subscription_count: int = 0
     storage_size: int = 0
@@ -91,6 +92,7 @@ class TopicDetailResponse(TopicBase):
     namespace: str
     full_name: str
     persistent: bool = True
+    description: str = ""
     stats: TopicStats
     internal_stats: TopicInternalStats
     producers: list[ProducerInfo] = Field(default_factory=list)
@@ -110,3 +112,9 @@ class TopicPartitionUpdate(BaseSchema):
     """Schema for updating topic partitions."""
 
     partitions: int = Field(..., ge=1, description="New number of partitions")
+
+
+class TopicDescriptionUpdate(BaseSchema):
+    """Schema for updating topic description."""
+
+    description: str = Field(..., max_length=500, description="Human-readable topic description")

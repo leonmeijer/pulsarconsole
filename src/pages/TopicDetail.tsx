@@ -27,7 +27,7 @@ import {
     Ruler,
     AlertTriangle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTopic, useSubscriptions, useBrowseMessages, useExamineMessages, useDeleteTopic, useTruncateTopic, queryKeys } from "@/api/hooks";
@@ -54,6 +54,111 @@ function formatCount(count: number): string {
 
 function formatTimestamp(timestamp: string): string {
     return new Date(timestamp).toLocaleString();
+}
+
+const dateTimePartsFormatter = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+});
+
+// Renders a timestamp with the time portion (hour onwards) emphasized so
+// "May 10, 2026, 9:11 PM" reads as date · **time**.
+function FormattedTimestamp({ value }: { value: string | number | Date }) {
+    const date = value instanceof Date ? value : new Date(value);
+    const parts = dateTimePartsFormatter.formatToParts(date);
+    const timeStartIdx = parts.findIndex((p) => p.type === 'hour');
+    if (timeStartIdx < 0) {
+        return <>{formatTimestamp(String(value))}</>;
+    }
+    const dateStr = parts.slice(0, timeStartIdx).map((p) => p.value).join('');
+    const timeStr = parts.slice(timeStartIdx).map((p) => p.value).join('');
+    return (
+        <>
+            {dateStr}
+            <span className="font-semibold text-foreground">{timeStr}</span>
+        </>
+    );
+}
+
+// Collapse state persists per topic-detail section via localStorage.
+const COLLAPSE_STORAGE_PREFIX = 'pulsar.topic-detail.collapse.';
+
+interface CollapseSetEventDetail {
+    key: string;
+    open: boolean;
+}
+
+function useCollapseState(storageKey: string, defaultOpen = true): [boolean, (next: boolean) => void] {
+    const [open, setOpen] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return defaultOpen;
+        try {
+            const raw = window.localStorage.getItem(COLLAPSE_STORAGE_PREFIX + storageKey);
+            return raw === null ? defaultOpen : raw === '1';
+        } catch {
+            return defaultOpen;
+        }
+    });
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(COLLAPSE_STORAGE_PREFIX + storageKey, open ? '1' : '0');
+        } catch {
+            // Storage unavailable — collapse just resets next session.
+        }
+    }, [open, storageKey]);
+    // Allow imperative collapse from elsewhere on the page (e.g. the header Browse shortcut).
+    useEffect(() => {
+        const handler = (event: Event) => {
+            const detail = (event as CustomEvent<CollapseSetEventDetail>).detail;
+            if (detail?.key === storageKey) setOpen(detail.open);
+        };
+        window.addEventListener('pulsar:collapse-set', handler);
+        return () => window.removeEventListener('pulsar:collapse-set', handler);
+    }, [storageKey]);
+    return [open, setOpen];
+}
+
+function dispatchCollapse(key: string, open: boolean) {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent<CollapseSetEventDetail>('pulsar:collapse-set', { detail: { key, open } }));
+}
+
+function CollapsibleSection({
+    title,
+    storageKey,
+    defaultOpen = true,
+    rightSlot,
+    headingClassName = 'text-xl font-semibold',
+    bodyClassName,
+    children,
+    id,
+}: {
+    title: React.ReactNode;
+    storageKey: string;
+    defaultOpen?: boolean;
+    rightSlot?: React.ReactNode;
+    headingClassName?: string;
+    bodyClassName?: string;
+    children: React.ReactNode;
+    id?: string;
+}) {
+    const [open, setOpen] = useCollapseState(storageKey, defaultOpen);
+    return (
+        <div id={id}>
+            <div className="flex items-center justify-between mb-4">
+                <button
+                    type="button"
+                    onClick={() => setOpen(!open)}
+                    className={cn(headingClassName, 'flex items-center gap-2 cursor-pointer select-none hover:text-primary transition-colors')}
+                    aria-expanded={open}
+                >
+                    {open ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    {title}
+                </button>
+                {rightSlot}
+            </div>
+            {open && <div className={bodyClassName}>{children}</div>}
+        </div>
+    );
 }
 
 function tryExtractJson(text: string): { prefix?: string; json: unknown } | null {
@@ -221,7 +326,7 @@ function MessageCard({ message }: { message: Message }) {
                 {message.publish_time && (
                     <div className="flex items-center gap-1">
                         <Clock size={14} />
-                        {formatTimestamp(message.publish_time)}
+                        <FormattedTimestamp value={message.publish_time} />
                     </div>
                 )}
                 {message.producer_name && (
@@ -276,36 +381,37 @@ function MessageCard({ message }: { message: Message }) {
     );
 }
 
-function MessageBrowser({
-    tenant,
-    namespace,
-    topic,
-    subscriptions,
-}: {
+export interface MessageBrowserHandle {
+    /** Switch to "Browse All" + Latest, then run browse. Used by the header Browse shortcut. */
+    browseLatest: () => void;
+}
+
+const MessageBrowser = forwardRef<MessageBrowserHandle, {
     tenant: string;
     namespace: string;
     topic: string;
     subscriptions: { name: string }[];
-}) {
+}>(function MessageBrowser({ tenant, namespace, topic, subscriptions }, ref) {
     const [browseMode, setBrowseMode] = useState<'subscription' | 'all'>('all');
     const [selectedSub, setSelectedSub] = useState(subscriptions[0]?.name || "");
     const [initialPosition, setInitialPosition] = useState<'earliest' | 'latest'>('earliest');
     const [messageCount, setMessageCount] = useState(10);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [open, setOpen] = useCollapseState('message-browser', true);
 
     const browseMessages = useBrowseMessages(tenant, namespace, topic, selectedSub, messageCount);
     const examineMessages = useExamineMessages(tenant, namespace, topic, messageCount);
 
     const isLoading = browseMessages.isPending || examineMessages.isPending;
 
-    const handleBrowse = async () => {
-        if (browseMode === 'subscription' && !selectedSub) {
+    const runBrowse = async (mode: 'subscription' | 'all', position: 'earliest' | 'latest') => {
+        if (mode === 'subscription' && !selectedSub) {
             toast.error("Select a subscription first");
             return;
         }
         try {
-            if (browseMode === 'all') {
-                const result = await examineMessages.mutateAsync({ initial_position: initialPosition });
+            if (mode === 'all') {
+                const result = await examineMessages.mutateAsync({ initial_position: position });
                 setMessages(result.messages);
                 if (result.messages.length === 0) {
                     toast.info("No messages in this topic");
@@ -317,20 +423,41 @@ function MessageBrowser({
                     toast.info("No messages in this subscription");
                 }
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to browse messages");
         }
     };
 
+    const handleBrowse = () => runBrowse(browseMode, initialPosition);
+
+    useImperativeHandle(ref, () => ({
+        browseLatest: () => {
+            setOpen(true);
+            setBrowseMode('all');
+            setInitialPosition('latest');
+            void runBrowse('all', 'latest');
+        },
+    // runBrowse closes over selectedSub, but 'all' mode doesn't read it; safe to omit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [tenant, namespace, topic, messageCount]);
+
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
+        <div id="message-browser" className="space-y-4 scroll-mt-24">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                <button
+                    type="button"
+                    onClick={() => setOpen(!open)}
+                    className="text-xl font-semibold flex items-center gap-2 cursor-pointer select-none hover:text-primary transition-colors"
+                    aria-expanded={open}
+                >
+                    {open ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                     <Eye size={20} />
                     Message Browser
-                </h2>
+                </button>
             </div>
 
+            {open && (
+            <>
             <div className="glass p-4 rounded-xl">
                 {/* Browse Mode Toggle */}
                 <div className="flex gap-2 mb-4">
@@ -437,9 +564,11 @@ function MessageBrowser({
                     ))}
                 </div>
             )}
+            </>
+            )}
         </div>
     );
-}
+});
 
 export default function TopicDetailPage() {
     const { tenant, namespace, topic } = useParams<{ tenant: string; namespace: string; topic: string }>();
@@ -470,6 +599,23 @@ export default function TopicDetailPage() {
     const [showTruncateConfirm, setShowTruncateConfirm] = useState(false);
     const [showProducers, setShowProducers] = useState(false);
     const { isFavorite, toggleFavorite } = useFavorites();
+    const messageBrowserRef = useRef<MessageBrowserHandle>(null);
+
+    const handleBrowseLatest = () => {
+        // Collapse other sections first so Message Browser ends up at the top
+        // of the viewport after scrolling.
+        dispatchCollapse('statistics', false);
+        dispatchCollapse('subscriptions', false);
+        setShowProducers(false);
+        messageBrowserRef.current?.browseLatest();
+        // Wait two animation frames so React commits the collapse state and
+        // the resulting layout shrinks before we measure the scroll target.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                document.getElementById('message-browser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    };
 
     const isLoading = topicLoading || subsLoading;
 
@@ -559,6 +705,15 @@ export default function TopicDetailPage() {
                             Delete
                         </button>
                     </PermissionGate>
+                    <button
+                        type="button"
+                        onClick={handleBrowseLatest}
+                        title="Browse latest messages"
+                        className="flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all active:scale-95"
+                    >
+                        <Eye size={18} />
+                        Browse
+                    </button>
                 </div>
             </div>
 
@@ -566,7 +721,8 @@ export default function TopicDetailPage() {
                 <div className="glass h-48 rounded-2xl animate-pulse" />
             ) : topicData && (
                 <>
-                    {/* Throughput Bar */}
+                    {/* Statistics — combines throughput, summary cards & internal stats. */}
+                    <CollapsibleSection title="Statistics" storageKey="statistics" bodyClassName="space-y-6">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -798,6 +954,7 @@ export default function TopicDetailPage() {
                             </div>
                         </div>
                     </div>
+                    </CollapsibleSection>
 
                     {/* Producers */}
                     <div>
@@ -841,9 +998,10 @@ export default function TopicDetailPage() {
                     </div>
 
                     {/* Subscriptions */}
-                    <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-semibold">Subscriptions ({subscriptions?.length || 0})</h2>
+                    <CollapsibleSection
+                        title={<>Subscriptions ({subscriptions?.length || 0})</>}
+                        storageKey="subscriptions"
+                        rightSlot={
                             <Link
                                 to={`/tenants/${tenant}/namespaces/${namespace}/topics/${topic}/subscriptions`}
                                 className="flex items-center gap-2 text-primary hover:underline text-sm"
@@ -851,7 +1009,8 @@ export default function TopicDetailPage() {
                                 Manage Subscriptions
                                 <ExternalLink size={14} />
                             </Link>
-                        </div>
+                        }
+                    >
                         {subsLoading ? (
                             <div className="glass h-32 rounded-xl animate-pulse" />
                         ) : !subscriptions?.length ? (
@@ -952,17 +1111,17 @@ export default function TopicDetailPage() {
                                 </table>
                             </div>
                         )}
-                    </div>
+                    </CollapsibleSection>
 
-                    {/* Message Browser */}
-                    {subscriptions && subscriptions.length > 0 && (
-                        <MessageBrowser
-                            tenant={tenant!}
-                            namespace={namespace!}
-                            topic={topic!}
-                            subscriptions={subscriptions}
-                        />
-                    )}
+                    {/* Message Browser — rendered unconditionally so the header
+                        Browse shortcut works even on topics without subscriptions. */}
+                    <MessageBrowser
+                        ref={messageBrowserRef}
+                        tenant={tenant!}
+                        namespace={namespace!}
+                        topic={topic!}
+                        subscriptions={subscriptions ?? []}
+                    />
 
                     {/* Partition Editor Modal */}
                     <TopicPartitionEditor
