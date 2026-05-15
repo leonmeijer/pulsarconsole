@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/leonmeijer/pulsarconsole/compare/v1.6.0...v1.7.0) (2026-05-15)
+
+
+### Features
+
+* **topic-detail:** port Browse shortcut + collapsible sections from backoffice ([2c8ddbb](https://github.com/leonmeijer/pulsarconsole/commit/2c8ddbb20f6d9872d0c1b16ffa1d1c114b4324b7))
+
+
+### Bug Fixes
+
+* **k8s:** raise api and worker memory to 512Mi/1Gi ([66c5d5d](https://github.com/leonmeijer/pulsarconsole/commit/66c5d5dc4947c1df9c13005c225181d5821f7137))
+
 ## [1.6.0](https://github.com/leonmeijer/pulsarconsole/compare/v1.5.0...v1.6.0) (2026-04-11)
 
 
